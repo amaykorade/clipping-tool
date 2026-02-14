@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Video {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Video metadata
+  title         String
+  originalUrl   String?
+  fileName      String
+  duration      Int
+  fileSize      Int
+
+  // Storage paths
+  storageKey    String
+  thumbnailUrl  String?
+
+  // Processing status
+  status        VideoStatus @default(UPLOADED)
+
+  // Transcription data
+  transcript    Json?
+  transcribedAt DateTime?
+
+  // Relationships
+  clips         Clip[]
+  jobs          Job[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Clip {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Parent video
+  videoId       String
+  video         Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Clip metadata
+  title         String
+  startTime     Float
+  endTime       Float
+  duration      Float
+
+  // AI - generated metadata
+  confidence    Float?
+  keywords      String[]
+
+  // Output Configuration
+  aspectRatio  AspectRatio @default(VERTICAL)
+  captionStyle String?
+
+  // Storage
+  outputUrl   String?
+  status      ClipStatus   @default(PENDING)
+
+  @@index([videoId])
+  @@index([status])
+}
+
+model Job {
+  id          String      @id @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Job tracking
+  type        JobType
+  status      JobStatus   @default(QUEUED)
+  progress    Int         @default(0)
+
+  // Related entities
+  videoId     String
+  video       Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Error handling
+  error       String?
+  retryCount  Int         @default(0)
+  maxRetries  Int         @default(3)
+
+  // Timings
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([type])
+}
+
+
+// Enums
+
+enum VideoStatus {
+  UPLOADED
+  TRANSCRIBING
+  ANALYZING
+  READY
+  ERROR
+}
+
+enum ClipStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  ERROR
+}
+
+enum AspectRatio{
+  VERTICAL 
+  SQUARE     
+  LANDSCAPE
+}
+
+enum JobType {
+  TRANSCRIBE
+  ANALYZE
+  GENERATE_CLIP
+  BATCH_EXPORT
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
