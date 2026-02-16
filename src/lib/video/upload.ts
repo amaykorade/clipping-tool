@@ -4,6 +4,7 @@ import path from "path";
 import { getStorage } from "../storage";
 import fs from "fs/promises";
 import { prisma } from "../db";
+import { canUploadVideo } from "../plans";
 
 export interface UploadOptions {
   title: string;
@@ -38,6 +39,19 @@ export async function processVideoUpload(
     }
 
     const metadata = validation.metadata!;
+
+    // Plan limits: video count and max duration
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, _count: { select: { videos: true } } },
+      });
+      if (user) {
+        const durationSec = Math.ceil(metadata.duration);
+        const check = canUploadVideo(user.plan, user._count.videos, durationSec);
+        if (!check.ok) throw new Error(check.error);
+      }
+    }
 
     // Generate unique storage key
     const videoId = uuidv4();

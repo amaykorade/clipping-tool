@@ -12,6 +12,8 @@ export interface RenderClipOptions {
   endTime: number;
   crop?: CropOptions;
   captions?: CaptionOptions;
+  /** When true, overlay a "Clipflow" watermark (e.g. for free plan). */
+  watermark?: boolean;
 }
 
 export interface CaptionOptions {
@@ -28,7 +30,7 @@ export interface CaptionOptions {
  * Combines: trimming, cropping, caption overlay
  */
 export async function renderClip(options: RenderClipOptions): Promise<void> {
-  const { inputPath, outputPath, startTime, endTime, crop, captions } = options;
+  const { inputPath, outputPath, startTime, endTime, crop, captions, watermark } = options;
 
   const durationSec = endTime - startTime;
   if (durationSec < 0.5) {
@@ -53,6 +55,11 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
     if (captions) {
       const captionFilter = buildCaptionFilter(captions, startTime);
       if (captionFilter) filters.push(captionFilter);
+    }
+
+    // 3. Watermark (free plan)
+    if (watermark) {
+      filters.push(buildWatermarkFilter());
     }
 
     if (filters.length > 0) {
@@ -88,6 +95,15 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
       })
       .run();
   });
+}
+
+/**
+ * Build watermark drawtext filter (bottom-right, semi-transparent).
+ */
+function buildWatermarkFilter(): string {
+  const text = "Clipflow";
+  const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
+  return `drawtext=text='${escaped}':x=w-tw-24:y=h-th-16:fontsize=22:fontcolor=white@0.6:bordercolor=black@0.4:borderw=1`;
 }
 
 /**

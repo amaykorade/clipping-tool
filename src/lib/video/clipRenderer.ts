@@ -2,6 +2,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
+import { getPlanLimits } from "@/lib/plans";
 import { renderClip, getVideoInfo } from "./processing";
 import { ClipStatus, AspectRatio } from "@/generated/prisma";
 import fs from "fs/promises";
@@ -11,7 +12,7 @@ const MIN_CLIP_DURATION_SEC = 1;
 export async function renderAndUploadClip(clipId: string): Promise<string> {
   const clip = await prisma.clip.findUnique({
     where: { id: clipId },
-    include: { video: true },
+    include: { video: { include: { user: { select: { plan: true } } } } },
   });
 
   if (!clip) throw new Error("Clip not found");
@@ -54,6 +55,9 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
       endTime,
     );
 
+    const plan = clip.video.user?.plan ?? "FREE";
+    const addWatermark = getPlanLimits(plan).watermark;
+
     // Render clip
     await renderClip({
       inputPath,
@@ -71,6 +75,7 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
               words: clipWords,
             }
           : undefined,
+      watermark: addWatermark,
     });
 
     // Upload rendered clip under the video's namespace so each video's shorts are stored together

@@ -13,6 +13,13 @@ datasource db {
   provider = "postgresql"
 }
 
+// --- Plans (Free, Starter, Pro) ---
+enum Plan {
+  FREE
+  STARTER
+  PRO
+}
+
 // --- NextAuth.js (Google login) ---
 model User {
   id            String    @id @default(cuid())
@@ -23,6 +30,16 @@ model User {
   accounts      Account[]
   sessions      Session[]
   videos        Video[]
+
+  // Subscription (plan & Razorpay)
+  plan                      Plan      @default(FREE)
+  razorpayCustomerId        String?
+  razorpaySubscriptionId    String?
+  subscriptionCurrentPeriodEnd DateTime?
+
+  // Free plan: 1 clip download per month
+  clipDownloadsUsedThisMonth Int      @default(0)
+  clipDownloadsPeriodStart   DateTime?
 }
 
 model Account {

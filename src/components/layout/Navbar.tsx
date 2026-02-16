@@ -8,6 +8,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/upload", label: "Upload" },
   { href: "/videos", label: "My videos" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 export default function Navbar() {

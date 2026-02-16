@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
 import { getStorage } from "@/lib/storage";
+import { canDownloadClip } from "@/lib/plans";
 
 function extractStorageKeyFromUrl(url: string): string | null {
   try {
@@ -34,7 +35,11 @@ export async function GET(
 
   const clip = await prisma.clip.findUnique({
     where: { id },
-    include: { video: { select: { userId: true } } },
+    include: {
+      video: {
+        include: { user: { select: { plan: true, clipDownloadsUsedThisMonth: true, clipDownloadsPeriodStart: true } } },
+      },
+    },
   });
 
   if (!clip || !clip.video) {
@@ -42,6 +47,18 @@ export async function GET(
   }
   if (!canAccessVideo(clip.video, session)) {
     return NextResponse.json({ error: "Clip not found" }, { status: 404 });
+  }
+
+  const user = clip.video.userId && clip.video.user ? clip.video.user : null;
+  if (user) {
+    const check = canDownloadClip(
+      user.plan,
+      user.clipDownloadsUsedThisMonth,
+      user.clipDownloadsPeriodStart,
+    );
+    if (!check.ok) {
+      return NextResponse.json({ error: check.error }, { status: 403 });
+    }
   }
 
   if (!clip.outputUrl) {
@@ -65,6 +82,20 @@ export async function GET(
     buffer = await storage.download(storageKey);
   } catch {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+
+  // Increment download usage for free plan (1 per month)
+  if (clip.video.userId && user) {
+    const now = new Date();
+    const periodStart = user.clipDownloadsPeriodStart;
+    const newPeriod = !periodStart || now.getFullYear() > periodStart.getFullYear() || now.getMonth() > periodStart.getMonth();
+    await prisma.user.update({
+      where: { id: clip.video.userId },
+      data: {
+        clipDownloadsUsedThisMonth: newPeriod ? 1 : user.clipDownloadsUsedThisMonth + 1,
+        clipDownloadsPeriodStart: newPeriod ? new Date(now.getFullYear(), now.getMonth(), 1) : periodStart,
+      },
+    });
   }
 
   const filename = `${sanitizeFilename(clip.title)}.mp4`;

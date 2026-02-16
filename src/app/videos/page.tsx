@@ -96,13 +96,6 @@ export default function MyVideosPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/" className="transition hover:text-slate-900">
-            Home
-          </Link>
-          <span aria-hidden>/</span>
-          <span className="font-medium text-slate-900">My videos</span>
-        </nav>
         <div className="flex flex-col items-center justify-center py-20">
           <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
           <p className="mt-4 text-sm text-slate-500">Loading your videos…</p>
@@ -114,13 +107,6 @@ export default function MyVideosPage() {
   if (error === "signin") {
     return (
       <div className="mx-auto max-w-2xl">
-        <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/" className="transition hover:text-slate-900">
-            Home
-          </Link>
-          <span aria-hidden>/</span>
-          <span className="font-medium text-slate-900">My videos</span>
-        </nav>
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <h1 className="text-xl font-semibold text-slate-900">My videos</h1>
           <p className="mt-2 text-slate-600">
@@ -140,13 +126,6 @@ export default function MyVideosPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-2xl">
-        <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/" className="transition hover:text-slate-900">
-            Home
-          </Link>
-          <span aria-hidden>/</span>
-          <span className="font-medium text-slate-900">My videos</span>
-        </nav>
         <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-red-800">
           <p>{error}</p>
           <Link
@@ -163,13 +142,6 @@ export default function MyVideosPage() {
   if (videos.length === 0) {
     return (
       <div className="mx-auto max-w-2xl">
-        <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/" className="transition hover:text-slate-900">
-            Home
-          </Link>
-          <span aria-hidden>/</span>
-          <span className="font-medium text-slate-900">My videos</span>
-        </nav>
         <header className="mb-10">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             My videos
@@ -199,14 +171,6 @@ export default function MyVideosPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/" className="transition hover:text-slate-900">
-          Home
-        </Link>
-        <span aria-hidden>/</span>
-        <span className="font-medium text-slate-900">My videos</span>
-      </nav>
-
       <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">

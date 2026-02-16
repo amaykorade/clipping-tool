@@ -280,13 +280,6 @@ export default function VideoDetailPage({
   if (loadingVideo) {
     return (
       <div className="mx-auto max-w-4xl">
-        <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-          <Link href="/" className="transition hover:text-slate-900">Home</Link>
-          <span aria-hidden>/</span>
-          <Link href="/videos" className="transition hover:text-slate-900">My videos</Link>
-          <span aria-hidden>/</span>
-          <span className="font-medium text-slate-900">…</span>
-        </nav>
         <div className="flex flex-col items-center justify-center py-20">
           <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
           <p className="mt-4 text-sm text-slate-500">Loading video…</p>
@@ -301,14 +294,6 @@ export default function VideoDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-10">
-      <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-        <Link href="/" className="transition hover:text-slate-900">Home</Link>
-        <span aria-hidden>/</span>
-        <Link href="/videos" className="transition hover:text-slate-900">My videos</Link>
-        <span aria-hidden>/</span>
-        <span className="font-medium text-slate-900 line-clamp-1">{videoTitle}</span>
-      </nav>
-
       {isProcessing && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-800">
           <strong>Processing in the background.</strong> You can leave this page — we’ll transcribe and generate clips automatically. Status updates every few seconds.

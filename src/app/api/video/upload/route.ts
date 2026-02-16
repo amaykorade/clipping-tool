@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
       userId: user.id,
     });
 
+    const userWithPlan = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { plan: true },
+    });
+    const { getPlanLimits } = await import("@/lib/plans");
+    const priority = userWithPlan ? getPlanLimits(userWithPlan.plan).jobPriority : 1;
+
     // Create Job row with same id as BullMQ job id later
     const dbJob = await prisma.job.create({
       data: {
@@ -87,11 +94,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Add to queue; pass DB job id explicitly
+    // Add to queue; pass DB job id and priority (higher = faster processing)
     const bullJob = await videoQueue.add(
       "transcribe",
       { type: JobType.TRANSCRIBE, videoId: result.videoId },
-      { jobId: dbJob.id },
+      { jobId: dbJob.id, priority },
     );
 
     return NextResponse.json({

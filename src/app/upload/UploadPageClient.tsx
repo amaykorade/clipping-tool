@@ -1,7 +1,6 @@
 "use client";
 
 import UploadForm from "@/components/video/UploadForm";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function UploadPageClient() {
@@ -13,14 +12,6 @@ export default function UploadPageClient() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <nav className="mb-8 flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/" className="transition hover:text-slate-900">
-          Home
-        </Link>
-        <span aria-hidden>/</span>
-        <span className="font-medium text-slate-900">Upload</span>
-      </nav>
-
       <header className="mb-10">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Upload video
