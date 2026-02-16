@@ -1,8 +1,40 @@
 import { prisma } from "@/lib/db";
 import { scoreAndTitleSegments } from "@/lib/ai/clipScoring";
 import { getBeatsFromTranscript } from "@/lib/ai/semanticSegmentation";
-import type { Transcript } from "@/types";
+import { refineClipBoundaries, applyTrailingAndOpeningRules } from "@/lib/ai/clipRefinement";
+import type { Transcript, ClipSuggestion } from "@/types";
 import { ClipStatus, AspectRatio } from "@/generated/prisma/enums";
+
+/** Round to 1s for dedup key so the same segment doesn't become multiple clips with different titles. */
+function timeRangeKey(startTime: number, endTime: number): string {
+  return `${Math.round(startTime)}-${Math.round(endTime)}`;
+}
+
+/**
+ * Deduplicate suggestions by time range. The LLM often returns several picks that snap to the same
+ * segment (same start/end), producing duplicate clips with different names. Keep one per unique range (highest confidence).
+ */
+function deduplicateSuggestionsByTimeRange(suggestions: ClipSuggestion[]): ClipSuggestion[] {
+  const byKey = new Map<string, ClipSuggestion>();
+  for (const s of suggestions) {
+    const key = timeRangeKey(s.startTime, s.endTime);
+    const existing = byKey.get(key);
+    if (!existing || (s.confidence ?? 0) > (existing.confidence ?? 0)) {
+      byKey.set(key, s);
+    }
+  }
+  const deduped = [...byKey.values()];
+  if (deduped.length < suggestions.length) {
+    console.log(
+      "[generateClipsFromTranscript] Deduplicated by time range:",
+      suggestions.length,
+      "→",
+      deduped.length,
+      "clips",
+    );
+  }
+  return deduped;
+}
 
 export interface CreatedClip {
   id: string;
@@ -84,7 +116,9 @@ export async function generateClipsFromTranscript(
       ? beats.map((b) => ({ start: b.startSentenceIndex, end: b.endSentenceIndex }))
       : [{ start: 0, end: sentences.length - 1 }];
 
-  const segments: { start: number; end: number; text: string }[] = [];
+  const LONG_PAUSE_SEC = 1.5; // Step 3: prefer clip boundaries at long pauses
+  type SegmentWithIndices = { start: number; end: number; text: string; startSentenceIndex: number; endSentenceIndex: number };
+  const segmentsWithIndices: SegmentWithIndices[] = [];
 
   if (sentences.length > 0) {
     outer: for (const range of rangesToUse) {
@@ -104,21 +138,42 @@ export async function generateClipsFromTranscript(
           const endsClean = endsWithSentencePunctuation(s.text);
 
           if (endsClean && duration >= minClipSec && duration <= maxClipSec) {
-            segments.push({
+            segmentsWithIndices.push({
               start,
               end,
               text: textParts.join(" "),
+              startSentenceIndex: i,
+              endSentenceIndex: j,
             });
           }
 
-          if (duration > maxClipSec || segments.length >= maxCandidates) {
-            if (segments.length >= maxCandidates) break outer;
+          if (duration > maxClipSec || segmentsWithIndices.length >= maxCandidates * 2) {
+            if (segmentsWithIndices.length >= maxCandidates * 2) break outer;
             break;
           }
         }
       }
     }
   }
+
+  // Step 3: Prefer candidates that start/end at long pauses. Rank by boundary quality, then cap at maxCandidates.
+  const sentenceGaps = transcript.sentenceGaps;
+  const segments: { start: number; end: number; text: string }[] = (() => {
+    let list = segmentsWithIndices;
+    if (sentenceGaps && sentenceGaps.length > 0) {
+      list = [...segmentsWithIndices].sort((a, b) => {
+        const score = (seg: SegmentWithIndices) => {
+          const gapAtStart = seg.startSentenceIndex < sentenceGaps.length ? (sentenceGaps[seg.startSentenceIndex] ?? 0) : 0;
+          const gapAfterEnd = seg.endSentenceIndex + 1 < sentenceGaps.length ? (sentenceGaps[seg.endSentenceIndex + 1] ?? 0) : 0;
+          const startNatural = gapAtStart >= LONG_PAUSE_SEC ? 1 : 0;
+          const endNatural = gapAfterEnd >= LONG_PAUSE_SEC ? 1 : 0;
+          return startNatural + endNatural; // 2 = both, 1 = one, 0 = none
+        };
+        return score(b) - score(a); // higher first
+      });
+    }
+    return list.slice(0, maxCandidates).map(({ start, end, text }) => ({ start, end, text }));
+  })();
 
   if (segments.length === 0) {
     throw new Error("No suitable segments found in transcript");
@@ -146,6 +201,18 @@ export async function generateClipsFromTranscript(
     console.log("[generateClipsFromTranscript] Using fallback suggestions:", suggestions.length);
   }
 
+  // Step 5: Refinement — LLM suggests tighter start/end sentence; re-cut to sentence boundaries.
+  if (sentences.length > 0 && suggestions.length > 0) {
+    suggestions = await refineClipBoundaries(transcript, suggestions);
+  }
+
+  // Step 6: Trailing/opening phrase rules — reject clips that end on "So next…" or start with "So, anyway…".
+  suggestions = applyTrailingAndOpeningRules(suggestions, transcript);
+
+  // Deduplicate: LLM can return multiple suggestions that map to the same time range (same segment), causing duplicate clips with different names. Keep one per unique range (highest confidence).
+  suggestions = deduplicateSuggestionsByTimeRange(suggestions);
+
+  // Step 7: Save and render — persist clips with 9:16 vertical (Reels, TikTok, Shorts). Platform presets (e.g. different min/max length per app) can be added via options later.
   const created = await prisma.$transaction(
     suggestions.map((s) =>
       prisma.clip.create({

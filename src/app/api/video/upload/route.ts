@@ -2,7 +2,8 @@ import { JobStatus, JobType } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { videoQueue } from "@/lib/queue";
 import { processVideoUpload } from "@/lib/video/upload";
-import { writeFile, writeFileSync } from "fs";
+import { requireAuth } from "@/lib/auth";
+import { writeFileSync } from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -13,9 +14,11 @@ const UploadSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
 });
 
-// Upload a video file
+// Upload a video file (requires login)
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth();
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const title = formData.get("title") as String | null;
@@ -70,6 +73,7 @@ export async function POST(request: NextRequest) {
       title: validation.data.title,
       originalFileName: file.name,
       tempFilePath,
+      userId: user.id,
     });
 
     // Create Job row with same id as BullMQ job id later
@@ -101,10 +105,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const err = error as Error;
+    if (err.message === "Unauthorized") {
+      return NextResponse.json({ error: "Please sign in to upload" }, { status: 401 });
+    }
     console.error("[API] Upload error:", error);
-
     return NextResponse.json(
-      { error: (error as Error).message || "Upload failed" },
+      { error: err.message || "Upload failed" },
       { status: 500 },
     );
   }

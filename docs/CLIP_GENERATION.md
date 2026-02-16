@@ -8,7 +8,8 @@ This document describes **what we currently implement** and **what we recommend 
 
 1. [Current Implementation](#current-implementation)
 2. [Recommended (Proper) Approach](#recommended-proper-approach)
-3. [File Reference](#file-reference)
+3. [How Step 3 and Step 4 Change the Output (and Why It’s Better)](#how-step-3-and-step-4-change-the-output-and-why-its-better)
+4. [File Reference](#file-reference)
 
 ---
 
@@ -135,17 +136,50 @@ This is the **target pipeline** so clips feel like human-cut shorts: one clear i
 
 ---
 
+## How Step 3 and Step 4 Change the Output (and Why It's Better)
+
+### Step 3: Prefer boundaries at long pauses (and speaker turns)
+
+**What we add:** We already build candidates **only within** each beat (Step 2). Step 3 adds: when we have many candidates, we **prefer** ones that:
+- **Start** right after a long pause (e.g. gap > 1.5s before the first sentence), and/or
+- **End** right before a long pause (e.g. gap > 1.5s after the last sentence).
+
+Concretely: we rank candidates so that "natural boundary" segments are considered first (or we keep them when capping at 200). The model then sees more clips that begin and end at "breath" boundaries.
+
+**How output changes:**
+- The **candidate set** sent to the LLM is biased toward clips that start/end at natural pauses.
+- Selected clips are more likely to **start clean** and **end clean**, instead of cutting in or out mid-thought.
+
+**Why it's better:** Long pauses often mark the boundary between thoughts or topics. Aligning clip edges with them makes clips feel less choppy and more like a human editor chose where to cut.
+
+### Step 4: Hook score, payoff score, and one-idea gate
+
+**What we add:**
+1. **First call (unchanged):** "From these candidates, pick the best ~10; prefer strong hook, one idea, good ending." → shortlist.
+2. **Second pass (new):** For each shortlisted clip we ask: "Rate 1–10: strength of the **opening as a hook**; strength of the **ending as a payoff**." We **drop** any clip with hook < 6 or payoff < 6.
+3. **Gate (new):** For each remaining clip we ask: "Does this clip convey **one clear, complete idea** that makes sense on its own? Yes/No." We **keep only Yes**.
+
+**How output changes:**
+- You may get **fewer** final clips (some are dropped by the hook/payoff bar or the one-idea gate).
+- Each kept clip is **enforced** to have: a decent **hook**, a decent **payoff**, and **one clear idea** that stands on its own.
+
+**Why it's better:** On short-form platforms, the first few seconds (hook) and the last few seconds (payoff) drive retention. Step 4 makes that explicit and removes clips that don't meet the bar, so the final list is more postable and less "meh."
+
+---
+
 ## File Reference
 
 | File | Role |
 |------|------|
-| `src/lib/video/generateClipsFromTranscript.ts` | Loads transcript, builds sentence-run candidates (25–70s, 1–6 sentences, end with punctuation), calls scoring, deletes old clips on regenerate, saves new clips. |
-| `src/lib/ai/clipScoring.ts` | `scoreAndTitleSegments()`: one LLM call to pick best clips from candidates; snap to nearest segment; filter by confidence (≥0.6) and duration (25–90s); prompt stresses hook, one idea, good ending. |
-| `src/lib/ai/clipSegmentation.ts` | Sentence-boundary segmentation (used e.g. for transcript API); supports Hindi `।` `॥`; not used in the main clip candidate build (candidates are built in generateClipsFromTranscript from raw sentences). |
+| `src/lib/video/generateClipsFromTranscript.ts` | Loads transcript; builds candidates within beats (Step 2); prefers long-pause boundaries (Step 3); calls scoring; Step 5 refinement + Step 6 rules; saves clips (Step 7). |
+| `src/lib/ai/clipScoring.ts` | First LLM call to pick best clips; Step 4 hook/payoff + one-idea gate; snap to segment; filter by confidence and duration. |
+| `src/lib/ai/clipRefinement.ts` | **Step 5:** `refineClipBoundaries()` — LLM suggests tighter start/end sentence, re-cut to sentence timestamps. **Step 6:** `applyTrailingAndOpeningRules()` — reject clips ending on "So next…" or starting with "So, anyway…". |
+| `src/lib/ai/semanticSegmentation.ts` | **Step 2:** `getBeatsFromTranscript()` — LLM returns topic/beat boundaries (sentence index ranges). |
+| `src/lib/ai/clipSegmentation.ts` | Sentence-boundary segmentation (used e.g. for transcript API); supports Hindi `।` `॥`. |
 | `src/lib/ai/transcription.ts` | AssemblyAI transcription; builds sentences with `. ! ?` and Hindi `।` `॥`; optional audio extraction fallback when provider says “no audio.” |
 | `src/app/api/videos/[id]/generate-clips/route.ts` | POST handler; calls `generateClipsFromTranscript(videoId)` and returns clips JSON. |
 | `src/app/api/videos/[id]/transcript/route.ts` | GET transcript + segments (from segmentTranscript) for the “View transcript” UI. |
-| `src/worker/transcriptionWorker.ts` | After transcription, calls `generateClipsFromTranscript` and queues render jobs for each new clip. |
+| `src/worker/transcriptionWorker.ts` | After transcription, calls `generateClipsFromTranscript` and queues render jobs (Step 7). |
 
 ---
 

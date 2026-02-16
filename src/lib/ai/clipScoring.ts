@@ -6,7 +6,11 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 interface ScoreOptions {
   maxClips?: number;
   language?: string;
+  /** Step 4: min hook/payoff score (1-10); clips below this are dropped. Set to 0 to disable. */
+  minHookPayoffScore?: number;
 }
+
+const DEFAULT_MIN_HOOK_PAYOFF = 6;
 
 /**
  * Ask the model to:
@@ -127,8 +131,8 @@ export async function scoreAndTitleSegments(
     )
     .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
 
-  // Clamp to maxClips and ensure fields exist, using snapped boundaries
-  return decorated.slice(0, maxClips).map((c) => ({
+  // Shortlist: up to maxClips with snapped boundaries
+  const shortlist = decorated.slice(0, maxClips).map((c) => ({
     startTime: c.snappedStart,
     endTime: c.snappedEnd,
     title: c.title || "Clip",
@@ -136,6 +140,95 @@ export async function scoreAndTitleSegments(
     confidence: c.confidence ?? 0.5,
     reason: c.reason || "",
   }));
+
+  // Step 4: Hook/payoff scores + one-idea gate (optional)
+  const minScore = opts.minHookPayoffScore ?? DEFAULT_MIN_HOOK_PAYOFF;
+  if (minScore > 0 && shortlist.length > 0) {
+    const filtered = await runHookPayoffAndOneIdeaGate(shortlist, segments, minScore);
+    return filtered;
+  }
+
+  return shortlist;
+}
+
+/**
+ * Step 4: For each shortlisted clip, rate hook (1-10) and payoff (1-10), and check one clear idea (Yes/No).
+ * Drop clips that don't meet minHookPayoffScore or that don't pass the one-idea gate.
+ */
+async function runHookPayoffAndOneIdeaGate(
+  shortlist: ClipSuggestion[],
+  segments: { start: number; end: number; text: string }[],
+  minScore: number,
+): Promise<ClipSuggestion[]> {
+  const withText = shortlist.map((c) => {
+    const seg = segments.find(
+      (s) => Math.abs(s.start - c.startTime) < 0.5 && Math.abs(s.end - c.endTime) < 0.5,
+    );
+    return { ...c, text: seg?.text ?? "" };
+  }).filter((c) => c.text.length > 0);
+
+  if (withText.length === 0) return shortlist;
+
+  const prompt = `You are judging short-form video clips (e.g. for Reels/TikTok). For each clip below, rate:
+1) hookScore (1-10): strength of the OPENING as a hook — does the first 3-5 seconds grab attention? (surprising, bold, curiosity, promise, emotion)
+2) payoffScore (1-10): strength of the ENDING as a payoff — does it feel like a conclusion, takeaway, or punchline? (not a lead-in like "So next..." or "Number two...")
+3) oneClearIdea (true/false): does this clip convey ONE clear, complete idea that makes sense on its own?
+
+Return a JSON array with one object per clip, in the same order, with keys: startTime, endTime, hookScore, payoffScore, oneClearIdea.
+
+Clips (startTime, endTime in seconds; text = transcript):
+${JSON.stringify(withText.map((c) => ({ startTime: c.startTime, endTime: c.endTime, text: c.text })), null, 2)}
+
+Return ONLY the JSON array.`;
+
+  try {
+    const res = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    });
+    const content = res.choices[0]?.message?.content;
+    if (!content || typeof content !== "string") return shortlist;
+
+    let raw = content.trim();
+    const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) raw = codeBlockMatch[1].trim();
+    const arrayMatch = raw.match(/\[[\s\S]*\]/);
+    if (arrayMatch) raw = arrayMatch[0];
+
+    const parsed = JSON.parse(raw) as Array<{
+      startTime?: number;
+      endTime?: number;
+      hookScore?: number;
+      payoffScore?: number;
+      oneClearIdea?: boolean;
+    }>;
+    if (!Array.isArray(parsed)) return shortlist;
+
+    const passed = new Set<string>();
+    for (let i = 0; i < Math.min(parsed.length, withText.length); i++) {
+      const p = parsed[i];
+      const clip = withText[i];
+      const key = `${clip.startTime}-${clip.endTime}`;
+      const hook = typeof p.hookScore === "number" ? p.hookScore : 0;
+      const payoff = typeof p.payoffScore === "number" ? p.payoffScore : 0;
+      const one = p.oneClearIdea === true;
+      if (hook >= minScore && payoff >= minScore && one) passed.add(key);
+    }
+
+    const filtered = shortlist.filter(
+      (c) => passed.has(`${c.startTime}-${c.endTime}`),
+    );
+    if (filtered.length < shortlist.length) {
+      console.log(
+        `[clipScoring] Step 4 gate: ${shortlist.length} → ${filtered.length} clips (hook/payoff >= ${minScore}, one clear idea)`,
+      );
+    }
+    return filtered.length > 0 ? filtered : shortlist; // if gate drops all, keep original shortlist
+  } catch (e) {
+    console.warn("[clipScoring] Hook/payoff/one-idea gate failed, keeping shortlist:", e);
+    return shortlist;
+  }
 }
 
 function buildPrompt(
@@ -169,6 +262,7 @@ For each candidate, judge:
    - The clip must make sense by itself, without needing the rest of the episode.
    - It should cover ONE clear point, story, or idea (no \"part 2 of 3\" feel).
    - Each segment already ends at a sentence boundary; prefer segments whose final sentence is a punchline, takeaway, or conclusion rather than a trailing "so..." or setup.
+   - Do NOT select segments whose last sentence is a fragment (1-2 words, e.g. "I'll") or incomplete, or whose first sentence is a fragment (e.g. "Effectively.", "So.") — these make the clip feel cut mid-thought.
 
 3) SHORT-FORM FIT
    - Works well as vertical short-form: concise, conversational, no long rambling.

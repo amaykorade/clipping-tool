@@ -10,6 +10,7 @@
     "worker": "npx tsx src/worker/startTranscriptionWorker.ts"
   },
   "dependencies": {
+    "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@types/fluent-ffmpeg": "^2.1.28",
@@ -22,6 +23,7 @@
     "ioredis": "^5.9.2",
     "multer": "^2.0.2",
     "next": "16.1.6",
+    "next-auth": "^4.24.13",
     "openai": "^6.17.0",
     "pg": "^8.18.0",
     "react": "19.2.3",

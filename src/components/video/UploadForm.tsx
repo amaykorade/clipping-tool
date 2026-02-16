@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface UploadFormProps {
   onUploadComplete?: (videoId: string) => void;
@@ -12,6 +12,8 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,97 +59,167 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
     }
   };
 
-  return (
-    <div className="mx-auto max-w-xl">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-xl font-semibold text-slate-900">Upload video</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          MP4, MOV, AVI or MKV · max 500MB
-        </p>
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!uploading) setDragActive(e.type === "dragenter" || e.type === "dragover");
+  };
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (uploading) return;
+    const f = e.dataTransfer.files?.[0];
+    if (f && /^video\//.test(f.type)) setFile(f);
+  };
+
+  const openFileDialog = () => {
+    if (!uploading) fileInputRef.current?.click();
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <form onSubmit={handleSubmit} className="p-6 sm:p-8">
+        <div className="space-y-8">
+          {/* Title */}
           <div>
             <label
-              htmlFor="title"
-              className="block text-sm font-medium text-slate-700"
+              htmlFor="upload-title"
+              className="block text-sm font-medium text-slate-900"
             >
               Video title
             </label>
+            <p className="mt-0.5 text-sm text-slate-500">
+              A short name for this video (e.g. episode name or topic).
+            </p>
             <input
-              id="title"
+              id="upload-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Episode 12 — Product launch"
-              className="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
+              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-500"
               disabled={uploading}
             />
           </div>
 
+          {/* File drop zone */}
           <div>
-            <label
-              htmlFor="file"
-              className="block text-sm font-medium text-slate-700"
-            >
-              File
+            <label className="block text-sm font-medium text-slate-900">
+              Video file
             </label>
-            <div className="mt-1.5">
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-8 transition hover:border-slate-400 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-60">
-                <input
-                  id="file"
-                  type="file"
-                  accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="hidden"
-                  disabled={uploading}
-                />
-                {file ? (
-                  <span className="text-sm font-medium text-slate-700">
-                    {file.name}
-                  </span>
-                ) : (
-                  <span className="text-sm text-slate-500">
-                    Click or drag to select a video
-                  </span>
-                )}
-                {file && (
-                  <span className="mt-1 text-xs text-slate-400">
+            <p className="mt-0.5 text-sm text-slate-500">
+              MP4, MOV, AVI or MKV · max 500MB
+            </p>
+            <input
+              ref={fileInputRef}
+              id="upload-file"
+              type="file"
+              accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+              disabled={uploading}
+            />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={openFileDialog}
+              onKeyDown={(e) => e.key === "Enter" && openFileDialog()}
+              className={`mt-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition sm:py-12 ${
+                dragActive
+                  ? "border-indigo-400 bg-indigo-50/50"
+                  : file
+                    ? "border-slate-200 bg-slate-50/50"
+                    : "border-slate-200 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50"
+              } ${uploading ? "pointer-events-none opacity-70" : "cursor-pointer"}`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {file ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
+                    <UploadIcon className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <p className="font-medium text-slate-900">{file.name}</p>
+                  <p className="text-sm text-slate-500">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
-                )}
-              </label>
+                  </p>
+                  {!uploading && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFileDialog();
+                      }}
+                      className="mt-1 text-sm font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                    >
+                      Choose a different file
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                    <UploadIcon className="h-7 w-7 text-slate-400" />
+                  </div>
+                  <p className="mt-3 font-medium text-slate-700">
+                    {dragActive ? "Drop your video here" : "Click to upload or drag and drop"}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    MP4, MOV, AVI, MKV · up to 500MB
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {error}
             </div>
           )}
 
           {uploading && (
-            <div className="space-y-2">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-slate-700">
+                  {progress < 100 ? "Uploading…" : "Processing…"}
+                </span>
+                <span className="text-slate-500">{Math.round(progress)}%</span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-300 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-center text-sm text-slate-500">
-                {progress < 100 ? "Uploading…" : "Processing…"}
-              </p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={uploading || !file || !title}
-            className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+            className="w-full rounded-xl bg-indigo-600 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
           >
             {uploading ? "Uploading…" : "Upload video"}
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
+  );
+}
+
+function UploadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+      />
+    </svg>
   );
 }

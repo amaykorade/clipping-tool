@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getSession, canAccessVideo } from "@/lib/auth";
 import { segmentTranscript } from "@/lib/ai/clipSegmentation";
 import type { Transcript } from "@/types";
 
@@ -13,11 +14,15 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  const session = await getSession();
   const video = await prisma.video.findUnique({
     where: { id },
-    select: { transcript: true, status: true },
+    select: { transcript: true, status: true, userId: true },
   });
   if (!video) {
+    return NextResponse.json({ error: "Video not found" }, { status: 404 });
+  }
+  if (!canAccessVideo(video, session)) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
   const transcript = video.transcript as Transcript | null;

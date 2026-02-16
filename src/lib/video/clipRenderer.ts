@@ -2,9 +2,11 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
-import { renderClip } from "./processing";
+import { renderClip, getVideoInfo } from "./processing";
 import { ClipStatus, AspectRatio } from "@/generated/prisma";
 import fs from "fs/promises";
+
+const MIN_CLIP_DURATION_SEC = 1;
 
 export async function renderAndUploadClip(clipId: string): Promise<string> {
   const clip = await prisma.clip.findUnique({
@@ -31,6 +33,15 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
     const videoBuffer = await storage.download(video.storageKey);
     await fs.writeFile(inputPath, videoBuffer);
 
+    // Clamp clip times to actual file duration to avoid ffmpeg "Conversion failed" (exit 234)
+    const fileInfo = await getVideoInfo(inputPath);
+    const durationSec = fileInfo.duration;
+    let startTime = Math.max(0, Math.min(clip.startTime, durationSec - MIN_CLIP_DURATION_SEC));
+    let endTime = Math.min(durationSec, Math.max(clip.endTime, startTime + MIN_CLIP_DURATION_SEC));
+    if (endTime - startTime < MIN_CLIP_DURATION_SEC) {
+      endTime = Math.min(durationSec, startTime + MIN_CLIP_DURATION_SEC);
+    }
+
     // Generate output path
     const outputFileName = `${uuidv4()}.mp4`;
     const outputPath = path.join("/tmp", outputFileName);
@@ -39,16 +50,16 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
     const transcript = video.transcript as any;
     const clipWords = extractClipWords(
       transcript?.words || [],
-      clip.startTime,
-      clip.endTime,
+      startTime,
+      endTime,
     );
 
     // Render clip
     await renderClip({
       inputPath,
       outputPath,
-      startTime: clip.startTime,
-      endTime: clip.endTime,
+      startTime,
+      endTime,
       crop: {
         aspectRatio: aspectRatioToString(clip.aspectRatio),
         position: "center",
@@ -62,9 +73,9 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
           : undefined,
     });
 
-    // Upload rendered clip
+    // Upload rendered clip under the video's namespace so each video's shorts are stored together
     const clipBuffer = await fs.readFile(outputPath);
-    const storageKey = `clips/${clip.id}/${outputFileName}`;
+    const storageKey = `videos/${video.id}/clips/${clip.id}/${outputFileName}`;
 
     const uploadResult = await storage.upload(clipBuffer, storageKey, {
       contentType: "video/mp4",

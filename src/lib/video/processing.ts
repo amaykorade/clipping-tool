@@ -30,10 +30,15 @@ export interface CaptionOptions {
 export async function renderClip(options: RenderClipOptions): Promise<void> {
   const { inputPath, outputPath, startTime, endTime, crop, captions } = options;
 
+  const durationSec = endTime - startTime;
+  if (durationSec < 0.5) {
+    return Promise.reject(new Error(`Invalid clip duration: ${durationSec}s (start=${startTime}, end=${endTime})`));
+  }
+
   return new Promise((resolve, reject) => {
     let command = ffmpeg(inputPath)
       .setStartTime(startTime)
-      .setDuration(endTime - startTime);
+      .setDuration(durationSec);
 
     // Add video filters
     const filters: string[] = [];
@@ -54,15 +59,17 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
       command = command.videoFilters(filters.join(","));
     }
 
-    // Output settings
+    // Output settings: -t ensures we never read past requested duration (avoids ffmpeg 234)
     command
       .outputOptions([
-        "-c:v libx264", // H.264 codec
-        "-preset fast", // Encoding speed
-        "-crf 23", // Quality (lower = better, 18-28 range)
-        "-c:a aac", // Audio codec
-        "-b:a 128k", // Audio bitrate
-        "-movflags +faststart", // Web optimization
+        "-t",
+        String(durationSec),
+        "-c:v libx264",
+        "-preset fast",
+        "-crf 23",
+        "-c:a aac",
+        "-b:a 128k",
+        "-movflags +faststart",
       ])
       .output(outputPath)
       .on("start", (cmd) => {

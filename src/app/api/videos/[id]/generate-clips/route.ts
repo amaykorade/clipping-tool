@@ -1,5 +1,7 @@
 import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTranscript";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getSession, canAccessVideo } from "@/lib/auth";
 
 export async function POST(
   _request: NextRequest,
@@ -7,6 +9,14 @@ export async function POST(
 ) {
   try {
     const { id: videoId } = await context.params;
+    const session = await getSession();
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { userId: true },
+    });
+    if (!video || !canAccessVideo(video, session)) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
     const clips = await generateClipsFromTranscript(videoId, { maxClips: 10 });
     return NextResponse.json({
       clips: clips.map((c) => ({

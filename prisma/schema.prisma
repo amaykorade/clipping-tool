@@ -13,10 +13,60 @@ datasource db {
   provider = "postgresql"
 }
 
+// --- NextAuth.js (Google login) ---
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  videos        Video[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires     DateTime
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// --- App models ---
 model Video {
   id            String    @id @default(cuid())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Owner (optional for backward compat with existing videos)
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Video metadata
   title         String
@@ -42,6 +92,7 @@ model Video {
 
   @@index([status])
   @@index([createdAt])
+  @@index([userId])
 }
 
 model Clip {

@@ -161,9 +161,11 @@ export async function waitForTranscription(
   const timeoutMs = opts.timeoutMs ?? 15 * 60_000;
   const intervalMs = opts.intervalMs ?? 10_000;
   const start = Date.now();
+  let pollCount = 0;
 
   while (true) {
     const result = await getTranscriptionResult(id);
+    pollCount += 1;
 
     if (result.status === "completed" && result.words) {
       const sentences = buildSentences(result.words);
@@ -180,6 +182,12 @@ export async function waitForTranscription(
 
     if (Date.now() - start > timeoutMs) {
       throw new Error("Transcription timeout");
+    }
+
+    // Log every ~30s so the worker doesn't appear stuck (interval is usually 10s)
+    if (pollCount % 3 === 1 && pollCount > 1) {
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      console.log(`[Transcription] Waiting for AssemblyAI... ${elapsed}s elapsed (status: ${result.status})`);
     }
 
     await new Promise((r) => setTimeout(r, intervalMs));

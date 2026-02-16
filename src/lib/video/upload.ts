@@ -9,6 +9,8 @@ export interface UploadOptions {
   title: string;
   originalFileName: string;
   tempFilePath: string;
+  /** Logged-in user id; if provided, video is owned by this user. */
+  userId?: string | null;
 }
 
 export interface UploadResult {
@@ -22,7 +24,7 @@ export interface UploadResult {
 export async function processVideoUpload(
   options: UploadOptions,
 ): Promise<UploadResult> {
-  const { title, originalFileName, tempFilePath } = options;
+  const { title, originalFileName, tempFilePath, userId } = options;
   let storageKey = "";
   let thumbnailKey = "";
 
@@ -91,6 +93,7 @@ export async function processVideoUpload(
         storageKey,
         thumbnailUrl,
         status: "UPLOADED",
+        ...(userId && { userId }),
       },
     });
 

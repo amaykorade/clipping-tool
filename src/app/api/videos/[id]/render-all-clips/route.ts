@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { videoQueue } from "@/lib/queue";
 import { JobType, JobStatus } from "@/generated/prisma";
+import { getSession, canAccessVideo } from "@/lib/auth";
 
 export async function POST(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  const session = await getSession();
 
   const video = await prisma.video.findUnique({
     where: { id },
@@ -15,6 +17,9 @@ export async function POST(
   });
 
   if (!video) {
+    return NextResponse.json({ error: "Video not found" }, { status: 404 });
+  }
+  if (!canAccessVideo(video, session)) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
 
