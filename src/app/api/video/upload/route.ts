@@ -1,4 +1,4 @@
-import { JobStatus, JobType } from "@/generated/prisma/enums";
+import { JobStatus, JobType } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 import { videoQueue } from "@/lib/queue";
 import { processVideoUpload } from "@/lib/video/upload";

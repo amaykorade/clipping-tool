@@ -14,9 +14,10 @@ export default async function PricingPage() {
       description: "Try it out",
       maxVideos: PLAN_LIMITS.FREE.maxVideos,
       maxDurationMin: Math.floor(PLAN_LIMITS.FREE.maxDurationSec / 60),
-      downloads: "1 download / month",
+      downloads: "Unlimited",
       watermark: true,
       speed: "Standard",
+      popular: false,
     },
     {
       id: "STARTER" as const,
@@ -28,6 +29,7 @@ export default async function PricingPage() {
       downloads: "Unlimited",
       watermark: false,
       speed: "Fast",
+      popular: true,
     },
     {
       id: "PRO" as const,
@@ -39,6 +41,7 @@ export default async function PricingPage() {
       downloads: "Unlimited",
       watermark: false,
       speed: "Priority",
+      popular: false,
     },
   ];
 

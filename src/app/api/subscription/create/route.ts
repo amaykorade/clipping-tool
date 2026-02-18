@@ -20,10 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: auth.id },
-      select: { id: true, email: true, name: true, razorpayCustomerId: true },
-    });
+    // Raw SQL to avoid Next.js serving a stale Prisma client for User (custom output + bundling).
+    const rows = await prisma.$queryRaw<
+      { id: string; email: string | null; name: string | null; razorpayCustomerId: string | null }[]
+    >`SELECT id, email, name, "razorpayCustomerId" FROM "User" WHERE id = ${auth.id}`;
+    const user = rows?.[0];
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -35,10 +36,7 @@ export async function POST(request: NextRequest) {
     if (!customerId) {
       const customer = await createCustomer(user.email ?? "", user.name ?? null);
       customerId = customer.id;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { razorpayCustomerId: customerId },
-      });
+      await prisma.$executeRaw`UPDATE "User" SET "razorpayCustomerId" = ${customerId} WHERE id = ${user.id}`;
     }
 
     const subscription = await createSubscription({

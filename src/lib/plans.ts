@@ -22,14 +22,14 @@ export const PLAN_LIMITS: Record<
   FREE: {
     maxVideos: 1,
     maxDurationSec: 20 * 60, // 20 min
-    maxClipDownloadsPerMonth: 1,
+    maxClipDownloadsPerMonth: null, // unlimited
     watermark: true,
     jobPriority: 3, // standard (lowest)
     label: "Free",
     priceMonthly: null,
   },
   STARTER: {
-    maxVideos: 5,
+    maxVideos: 10,
     maxDurationSec: 60 * 60, // 60 min
     maxClipDownloadsPerMonth: null,
     watermark: false,
@@ -38,7 +38,7 @@ export const PLAN_LIMITS: Record<
     priceMonthly: 19,
   },
   PRO: {
-    maxVideos: 15,
+    maxVideos: 25,
     maxDurationSec: 3 * 60 * 60, // 3 hours
     maxClipDownloadsPerMonth: null,
     watermark: false,

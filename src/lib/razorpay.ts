@@ -6,20 +6,20 @@
 const BASE = "https://api.razorpay.com/v1";
 
 function getRazorpayKeyId(): string {
-  return (
+  const raw =
     process.env.RAZORPAY_KEY_ID ||
     process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
     process.env.next_public_razorpay_key_id ||
-    ""
-  );
+    "";
+  return raw.trim();
 }
 
 function getRazorpayKeySecret(): string {
-  return (
+  const raw =
     process.env.RAZORPAY_KEY_SECRET ||
     process.env.razorpay_key_secret ||
-    ""
-  );
+    "";
+  return raw.trim();
 }
 
 function authHeader(): string {
@@ -27,7 +27,7 @@ function authHeader(): string {
   const keySecret = getRazorpayKeySecret();
   if (!keyId || !keySecret) {
     throw new Error(
-      "Razorpay credentials not configured. Set RAZORPAY_KEY_ID (or NEXT_PUBLIC_RAZORPAY_KEY_ID) and RAZORPAY_KEY_SECRET (or razorpay_key_secret) in .env"
+      "Razorpay credentials not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env"
     );
   }
   return "Basic " + Buffer.from(`${keyId}:${keySecret}`).toString("base64");
@@ -78,6 +78,25 @@ export async function createSubscription(params: {
   }
   const data = (await res.json()) as { id: string; short_url?: string };
   return data;
+}
+
+/** Cancel subscription. Pass true to cancel at end of billing cycle (user keeps access until then). */
+export async function cancelSubscription(
+  subscriptionId: string,
+  cancelAtCycleEnd: boolean = true,
+): Promise<void> {
+  const res = await fetch(`${BASE}/subscriptions/${subscriptionId}/cancel`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authHeader(),
+    },
+    body: JSON.stringify({ cancel_at_cycle_end: cancelAtCycleEnd }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Razorpay cancel subscription failed: ${res.status} ${err}`);
+  }
 }
 
 export function getPlanId(plan: "STARTER" | "PRO"): string {

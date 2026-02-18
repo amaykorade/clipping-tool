@@ -16,7 +16,19 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!session?.user) {
+      setPlanLabel(null);
+      return;
+    }
+    fetch("/api/subscription/status")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => data?.label != null && setPlanLabel(data.label))
+      .catch(() => {});
+  }, [session?.user]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -94,7 +106,20 @@ export default function Navbar() {
                         {session.user.email}
                       </p>
                     )}
+                    {planLabel && (
+                      <p className="mt-1 text-xs font-medium text-indigo-600">
+                        {planLabel} plan
+                      </p>
+                    )}
                   </div>
+                  <Link
+                    href="/account"
+                    onClick={() => setAccountOpen(false)}
+                    className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    Account
+                  </Link>
                   <Link
                     href="/videos"
                     onClick={() => setAccountOpen(false)}
@@ -209,7 +234,22 @@ export default function Navbar() {
                           {session.user.email}
                         </p>
                       )}
+                      {planLabel && (
+                        <p className="mt-1 text-xs font-medium text-indigo-600">
+                          {planLabel} plan
+                        </p>
+                      )}
                     </div>
+                    <Link
+                      href="/account"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        setMobileAccountOpen(false);
+                      }}
+                      className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      Account
+                    </Link>
                     <Link
                       href="/videos"
                       onClick={() => {

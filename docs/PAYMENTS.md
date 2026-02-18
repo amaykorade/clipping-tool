@@ -21,11 +21,61 @@ RAZORPAY_WEBHOOK_SECRET=...         # From Webhooks → Add secret
 
 ## Razorpay setup
 
-1. Create two **Plans** (Subscriptions → Plans): e.g. "Starter $19/mo" and "Pro $49/mo" (monthly, amount in your currency).
-2. Copy plan IDs into `RAZORPAY_PLAN_STARTER_ID` and `RAZORPAY_PLAN_PRO_ID`.
-3. Add webhook URL: `https://your-domain.com/api/webhooks/razorpay`
-   - Events: `subscription.activated`, `subscription.charged`, `subscription.cancelled`, `subscription.completed`.
-4. Copy webhook secret to `RAZORPAY_WEBHOOK_SECRET`.
+### 1. Create plans (Subscriptions)
+
+1. Go to [Razorpay Dashboard](https://dashboard.razorpay.com) → **Subscriptions** → **Plans** (or **Settings** → **Subscriptions** → **Plans**).
+2. Click **Create Plan** (or **+ New Plan**).
+
+**Starter plan ($19/month):**
+
+- **Plan name:** e.g. `Clipflow Starter` or `Starter $19/mo`
+- **Amount:**  
+  - INR: `1900` (₹19 = 1900 paise)  
+  - USD: `1900` (if using USD, $19 = 1900 cents — check your account currency)
+- **Billing cycle:** `Monthly`
+- **Interval:** `1` month
+- Save and copy the **Plan ID** (starts with `plan_`). Put it in `.env` as `RAZORPAY_PLAN_STARTER_ID`.
+
+**Pro plan ($49/month):**
+
+- Create another plan the same way.
+- **Plan name:** e.g. `Clipflow Pro` or `Pro $49/mo`
+- **Amount:**  
+  - INR: `4900` (₹49)  
+  - USD: `4900` ($49 in cents if applicable)
+- **Billing cycle:** `Monthly`
+- Copy the **Plan ID** → `RAZORPAY_PLAN_PRO_ID` in `.env`.
+
+### 2. Get API keys
+
+- **Settings** → **API Keys** (or **Configurations** → **API Keys**).
+- Generate or copy **Key ID** (`rzp_...`) and **Key Secret**.
+- In `.env`: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (and optionally `NEXT_PUBLIC_RAZORPAY_KEY_ID` for the frontend if you show the key there).
+
+### 3. Set up the webhook
+
+1. In Razorpay: **Settings** → **Webhooks** (or **Configurations** → **Webhooks**).
+2. Click **+ Add New Webhook**.
+3. **Webhook URL:**  
+   `https://your-domain.com/api/webhooks/razorpay`  
+   (Replace `your-domain.com` with your real domain, e.g. `app.clipflow.com`. For local testing you can use a tunnel like ngrok: `https://abc123.ngrok.io/api/webhooks/razorpay`.)
+4. **Alert email:** Your email (for delivery failures).
+5. **Active events** — enable these four:
+   - `subscription.activated`
+   - `subscription.charged`
+   - `subscription.cancelled`
+   - `subscription.completed`
+6. Save. Razorpay will show a **Secret** (or you can add a secret and copy it). Copy that value into `.env` as `RAZORPAY_WEBHOOK_SECRET`.
+
+### 4. Env summary
+
+```env
+RAZORPAY_KEY_ID=rzp_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_PLAN_STARTER_ID=plan_...
+RAZORPAY_PLAN_PRO_ID=plan_...
+RAZORPAY_WEBHOOK_SECRET=...
+```
 
 ## Flow
 

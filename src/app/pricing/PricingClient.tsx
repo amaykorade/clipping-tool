@@ -15,6 +15,7 @@ type PlanRow = {
   downloads: string;
   watermark: boolean;
   speed: string;
+  popular?: boolean;
 };
 
 export default function PricingClient({
@@ -54,12 +55,17 @@ export default function PricingClient({
       {plans.map((p) => (
         <div
           key={p.id}
-          className={`rounded-2xl border-2 p-6 ${
-            p.id === "STARTER"
+          className={`relative rounded-2xl border-2 p-6 ${
+            p.popular
               ? "border-indigo-500 bg-indigo-50/30 shadow-lg"
               : "border-slate-200 bg-white"
           }`}
         >
+          {p.popular && (
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">
+              Most popular
+            </span>
+          )}
           <div className="flex flex-col">
             <h2 className="text-lg font-bold text-slate-900">{p.name}</h2>
             <p className="mt-1 text-sm text-slate-500">{p.description}</p>
@@ -94,7 +100,7 @@ export default function PricingClient({
                   onClick={() => handleUpgrade(p.id)}
                   disabled={loading !== null}
                   className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition ${
-                    p.id === "STARTER"
+                    p.popular
                       ? "bg-indigo-600 hover:bg-indigo-500 disabled:opacity-70"
                       : "bg-slate-800 hover:bg-slate-700 disabled:opacity-70"
                   }`}

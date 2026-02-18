@@ -3,7 +3,7 @@ import { scoreAndTitleSegments } from "@/lib/ai/clipScoring";
 import { getBeatsFromTranscript } from "@/lib/ai/semanticSegmentation";
 import { refineClipBoundaries, applyTrailingAndOpeningRules } from "@/lib/ai/clipRefinement";
 import type { Transcript, ClipSuggestion } from "@/types";
-import { ClipStatus, AspectRatio } from "@/generated/prisma/enums";
+import { ClipStatus, AspectRatio } from "@/generated/prisma";
 
 /** Round to 1s for dedup key so the same segment doesn't become multiple clips with different titles. */
 function timeRangeKey(startTime: number, endTime: number): string {

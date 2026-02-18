@@ -1,5 +1,4 @@
-import { JobType } from "@/generated/prisma";
-import { JobStatus, VideoStatus } from "@/generated/prisma/enums";
+import { JobType, JobStatus, VideoStatus } from "@/generated/prisma";
 import {
   startTranscriptionFromBuffer,
   extractAudioAndStartTranscription,
