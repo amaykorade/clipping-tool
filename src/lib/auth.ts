@@ -14,8 +14,6 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { strategy: "database", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/" },
-  // Required for callback URL to work (e.g. localhost in dev)
-  trustHost: true,
   callbacks: {
     session({ session, user }) {
       if (session.user) {

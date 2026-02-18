@@ -1,14 +1,14 @@
+import type { Video, Clip, Job } from "../generated/prisma";
 import {
-  Video,
-  Clip,
-  Job,
   VideoStatus,
   ClipStatus,
   AspectRatio,
 } from "../generated/prisma";
 
-// Re-export both the types and runtime enum values from the generated client.
-export { Video, Clip, Job, VideoStatus, ClipStatus, AspectRatio };
+// Model types only (type-only for isolatedModules)
+export type { Video, Clip, Job };
+// Enums: types + runtime values
+export { VideoStatus, ClipStatus, AspectRatio };
 
 export interface VideoWithClips extends Video {
   clips: Clip[];

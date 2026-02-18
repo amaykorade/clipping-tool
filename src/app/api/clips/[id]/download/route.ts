@@ -100,7 +100,7 @@ export async function GET(
 
   const filename = `${sanitizeFilename(clip.title)}.mp4`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "video/mp4",
