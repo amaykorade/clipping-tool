@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-
-type Plan = "STARTER" | "PRO";
+import type { Plan } from "@/lib/plans";
 
 export default function AccountClient({
   plan,
