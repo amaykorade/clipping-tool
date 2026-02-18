@@ -4,9 +4,10 @@ import { prisma } from "@/lib/db";
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const video = await prisma.video.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+  const video = await prisma.video.findUnique({ where: { id } });
 
   if (!video) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
