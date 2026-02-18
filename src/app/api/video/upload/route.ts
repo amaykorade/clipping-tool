@@ -1,6 +1,5 @@
 import { JobStatus, JobType } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { videoQueue } from "@/lib/queue";
 import { processVideoUpload } from "@/lib/video/upload";
 import { requireAuth } from "@/lib/auth";
 import { writeFileSync } from "fs";
@@ -95,6 +94,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Add to queue; pass DB job id and priority (higher = faster processing)
+    const { videoQueue } = await import("@/lib/queue");
     const bullJob = await videoQueue.add(
       "transcribe",
       { type: JobType.TRANSCRIBE, videoId: result.videoId },

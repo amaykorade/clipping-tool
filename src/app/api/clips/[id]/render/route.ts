@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { videoQueue } from "@/lib/queue";
 import { JobType, JobStatus } from "@/generated/prisma";
 import { getSession, canAccessVideo } from "@/lib/auth";
 
@@ -32,6 +31,7 @@ export async function POST(
   }
 
   try {
+    const { videoQueue } = await import("@/lib/queue");
     const dbJob = await prisma.job.create({
       data: {
         type: JobType.GENERATE_CLIP,
