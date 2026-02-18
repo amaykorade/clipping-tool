@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PLAN_LIMITS } from "@/lib/plans";
-import type { Plan } from "@/generated/prisma";
+import type { Plan } from "@/lib/plans";
 import AccountClient from "./AccountClient";
 
 // Raw SQL for User/plan so we avoid Next.js serving a stale Prisma client (custom output + bundling).

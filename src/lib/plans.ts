@@ -3,7 +3,7 @@
  * Free, Starter ($19/mo), Pro ($49/mo).
  */
 
-import type { Plan } from "@/generated/prisma";
+export type Plan = "FREE" | "STARTER" | "PRO";
 
 export const PLAN_LIMITS: Record<
   Plan,
