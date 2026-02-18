@@ -21,6 +21,11 @@ function getVideoQueue(): Queue<VideoJobData> {
       {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
+        retryStrategy(times) {
+          const delay = Math.min(times * 500, 5000);
+          return delay;
+        },
+        enableOfflineQueue: true,
       },
     );
     _videoQueue = new Queue<VideoJobData>(VIDEO_QUEUE_NAME, {

@@ -18,6 +18,11 @@ const connection = new IORedis(
     // Required by BullMQ when using ioredis
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    retryStrategy(times) {
+      const delay = Math.min(times * 500, 5000);
+      return delay;
+    },
+    enableOfflineQueue: true,
   },
 );
 
