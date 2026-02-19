@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStorage } from '@/lib/storage'
+import { getStorage, isS3Storage } from '@/lib/storage'
 import path from 'path'
 
 /**
@@ -16,7 +16,7 @@ function parseRange(rangeHeader: string | null, totalLength: number): { start: n
 
 /**
  * GET /upload/clips/.../file.mp4 (and other uploaded files)
- * Serves with Range support so video playback and seeking work in the browser.
+ * For S3: redirects to presigned URL. For local: serves with Range support.
  */
 export async function GET(
   request: NextRequest,
@@ -30,6 +30,11 @@ export async function GET(
     const exists = await storage.exists(filePath)
     if (!exists) {
       return new NextResponse('File not found', { status: 404 })
+    }
+
+    if (isS3Storage(storage)) {
+      const signedUrl = await storage.getPresignedGetUrl(filePath)
+      return NextResponse.redirect(signedUrl, { status: 302 })
     }
 
     const buffer = await storage.download(filePath)

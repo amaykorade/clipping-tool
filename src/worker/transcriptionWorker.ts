@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/db";
 import { VIDEO_QUEUE_NAME, videoQueue, VideoJobData } from "@/lib/queue";
 import { getStorage } from "@/lib/storage";
+import { finalizePendingUpload } from "@/lib/video/upload";
 import { renderAndUploadClip } from "@/lib/video/clipRenderer";
 import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTranscript";
 import { Worker, Job } from "bullmq";
@@ -45,11 +46,19 @@ async function handleVideoJob(job: Job<VideoJobData>) {
       },
     });
 
-    const video = await prisma.video.findUnique({
+    let video = await prisma.video.findUnique({
       where: { id: videoId },
     });
     if (!video) {
       throw new Error(`Video ${videoId} not found`);
+    }
+
+    // If this was a fast-path upload (pending/), finalize first: ffmpeg + move to final storage
+    if (video.storageKey.startsWith("pending/")) {
+      console.log(`[Worker] Finalizing pending upload for video ${videoId}`);
+      await finalizePendingUpload(videoId);
+      video = await prisma.video.findUnique({ where: { id: videoId } });
+      if (!video) throw new Error(`Video ${videoId} not found after finalize`);
     }
 
     // Get the file data from storage

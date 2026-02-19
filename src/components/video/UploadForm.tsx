@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 interface UploadFormProps {
   onUploadComplete?: (videoId: string) => void;
 }
+
+type UploadStrategy = "direct" | "presigned";
 
 export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [title, setTitle] = useState("");
@@ -13,7 +15,15 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploadStrategy, setUploadStrategy] = useState<UploadStrategy>("direct");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/video/upload")
+      .then((r) => r.json())
+      .then((d) => setUploadStrategy(d.uploadStrategy || "direct"))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,27 +38,73 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
     setProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("title", title);
+      if (uploadStrategy === "presigned") {
+        const urlRes = await fetch("/api/video/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            filename: file.name,
+            fileSize: file.size,
+            contentType: file.type,
+          }),
+        });
+        if (!urlRes.ok) {
+          const d = await urlRes.json();
+          throw new Error(d.error || "Failed to get upload URL");
+        }
+        const { videoId, uploadUrl } = await urlRes.json();
 
-      const response = await fetch("/api/video/upload", {
-        method: "POST",
-        body: formData,
-      });
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setProgress(Math.round((ev.loaded / ev.total) * 90));
+          }
+        };
+        await new Promise<void>((resolve, reject) => {
+          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload failed")));
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.send(file);
+        });
 
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type") ?? "";
-        const message = contentType.includes("application/json")
-          ? (await response.json()).error
-          : await response.text();
-        throw new Error(message || "Upload failed");
+        setProgress(95);
+        const completeRes = await fetch("/api/video/upload-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoId }),
+        });
+        if (!completeRes.ok) {
+          const d = await completeRes.json();
+          throw new Error(d.error || "Failed to complete upload");
+        }
+
+        setProgress(100);
+        onUploadComplete?.(videoId);
+      } else {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("title", title);
+
+        const response = await fetch("/api/video/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const contentType = response.headers.get("content-type") ?? "";
+          const message = contentType.includes("application/json")
+            ? (await response.json()).error
+            : await response.text();
+          throw new Error(message || "Upload failed");
+        }
+
+        const data = await response.json();
+
+        setProgress(100);
+        onUploadComplete?.(data.video.id);
       }
-
-      const data = await response.json();
-
-      setProgress(100);
-      onUploadComplete?.(data.video.id);
 
       setTitle("");
       setFile(null);

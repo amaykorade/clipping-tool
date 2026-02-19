@@ -55,6 +55,7 @@ export class LocalStorage implements IStorage {
       await fs.mkdir(this.basePath, { recursive: true });
       await fs.mkdir(path.join(this.basePath, "videos"), { recursive: true });
       await fs.mkdir(path.join(this.basePath, "clips"), { recursive: true });
+      await fs.mkdir(path.join(this.basePath, "pending"), { recursive: true });
       await fs.mkdir(path.join(this.basePath, "thumbnail"), {
         recursive: true,
       });
@@ -136,30 +137,106 @@ export class LocalStorage implements IStorage {
 }
 
 /**
- * S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces)
- * We'll implement this in Phase 6 when we optimize for production
+ * AWS S3 storage
+ * Uses presigned URLs for direct browser uploads (no file through our server).
  */
 export class S3Storage implements IStorage {
-  // TODO: Implement S3 logic
-  async upload(file: Buffer | Readable, key: string): Promise<UploadResult> {
-    throw new Error("S3Storage not implemented yet");
+  private bucket: string;
+  private region: string;
+  private baseUrl: string;
+
+  constructor() {
+    const bucket = process.env.AWS_S3_BUCKET;
+    const region = process.env.AWS_REGION || "ap-south-1";
+    if (!bucket) throw new Error("AWS_S3_BUCKET is required when STORAGE_TYPE=s3");
+    this.bucket = bucket;
+    this.region = region;
+    this.baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  }
+
+  async upload(
+    file: Buffer | Readable,
+    key: string,
+    metadata?: UploadMetadata,
+  ): Promise<UploadResult> {
+    const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({ region: this.region });
+    const body = Buffer.isBuffer(file) ? file : await this.readStream(file);
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: body,
+      ContentType: metadata?.contentType || "application/octet-stream",
+    });
+    await client.send(cmd);
+    return {
+      key,
+      url: `${this.baseUrl}/upload/${key}`,
+      size: metadata?.fileSize || body.length,
+    };
+  }
+
+  private async readStream(stream: Readable): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
   }
 
   async download(key: string): Promise<Buffer> {
-    throw new Error("S3Storage not implemented yet");
+    const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({ region: this.region });
+    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const res = await client.send(cmd);
+    if (!res.Body) throw new Error(`File not found: ${key}`);
+    return Buffer.from(await res.Body.transformToByteArray());
   }
 
   getUrl(key: string): string {
-    throw new Error("S3Storage not implemented yet");
+    return `${this.baseUrl}/upload/${key}`;
+  }
+
+  /** Generate a presigned PUT URL for direct browser upload (expires in 1 hour). */
+  async getPresignedPutUrl(key: string, contentType: string, expiresIn = 3600): Promise<string> {
+    const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+    const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+    const client = new S3Client({ region: this.region });
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    return getSignedUrl(client, cmd, { expiresIn });
+  }
+
+  /** Generate a presigned GET URL for secure file access (expires in 1 hour). */
+  async getPresignedGetUrl(key: string, expiresIn = 3600): Promise<string> {
+    const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+    const client = new S3Client({ region: this.region });
+    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    return getSignedUrl(client, cmd, { expiresIn });
   }
 
   async delete(key: string): Promise<void> {
-    throw new Error("S3Storage not implemented yet");
+    const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({ region: this.region });
+    await client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async exists(key: string): Promise<boolean> {
-    throw new Error("S3Storage not implemented yet");
+    const { S3Client, HeadObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({ region: this.region });
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return true;
+    } catch {
+      return false;
+    }
   }
+}
+
+export function isS3Storage(storage: IStorage): storage is S3Storage {
+  return storage instanceof S3Storage;
 }
 
 /**

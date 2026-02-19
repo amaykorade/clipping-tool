@@ -1,11 +1,8 @@
 import { JobStatus, JobType } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { processVideoUpload } from "@/lib/video/upload";
+import { savePendingUpload } from "@/lib/video/upload";
 import { requireAuth } from "@/lib/auth";
-import { writeFileSync } from "fs";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 // Validation schema
@@ -58,20 +55,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save to temporary file
+    // Fast path: save to pending storage only; worker will do ffmpeg + finalize
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const tempFileName = `${uuidv4()}${path.extname(file.name)}`;
-    const tempFilePath = path.join("/tmp", tempFileName);
-
-    await writeFileSync(tempFilePath, buffer);
-
-    // Process upload (validation, metadata, storage)
-    const result = await processVideoUpload({
+    const result = await savePendingUpload({
       title: validation.data.title,
       originalFileName: file.name,
-      tempFilePath,
+      fileBuffer: buffer,
       userId: user.id,
     });
 
@@ -125,7 +116,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const storageType = process.env.STORAGE_TYPE || "local";
   return NextResponse.json({
+    uploadStrategy: storageType === "s3" ? "presigned" : "direct",
     maxFileSize: 500 * 1024 * 1024, // 500MB
     allowedTypes: [
       "video/mp4",
