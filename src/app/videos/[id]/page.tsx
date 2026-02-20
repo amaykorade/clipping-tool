@@ -113,7 +113,11 @@ export default function VideoDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [video, setVideo] = useState<{ title: string; status: string } | null>(null);
+  const [video, setVideo] = useState<{
+    title: string;
+    status: string;
+    errorDisplay?: { title: string; message: string; action: string } | null;
+  } | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingVideo, setLoadingVideo] = useState(true);
@@ -138,7 +142,11 @@ export default function VideoDetailPage({
       const res = await fetch(`/api/videos/${id}`);
       if (!res.ok) return;
       const data = await res.json();
-      setVideo({ title: data.title, status: data.status });
+      setVideo({
+        title: data.title,
+        status: data.status,
+        errorDisplay: data.errorDisplay ?? null,
+      });
       setClips(Array.isArray(data.clips) ? data.clips : []);
     } finally {
       if (!opts.silent) {
@@ -153,7 +161,8 @@ export default function VideoDetailPage({
   }, [id]);
 
   useEffect(() => {
-    if (!video || video.status === "READY") return;
+    // Stop polling when done (READY) or failed (ERROR)
+    if (!video || video.status === "READY" || video.status === "ERROR") return;
     const interval = setInterval(() => {
       fetchVideo({ silent: true });
     }, 4000);
@@ -294,6 +303,21 @@ export default function VideoDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-10">
+      {video?.status === "ERROR" && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4">
+          <h3 className="font-semibold text-red-800">
+            {video.errorDisplay?.title ?? "Processing failed"}
+          </h3>
+          <p className="mt-2 text-sm text-red-700">
+            {video.errorDisplay?.message ??
+              "Something went wrong while processing your video."}
+          </p>
+          <p className="mt-2 text-sm text-red-700">
+            {video.errorDisplay?.action ??
+              "Delete this video and upload it again to retry."}
+          </p>
+        </div>
+      )}
       {isProcessing && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-800">
           <strong>Processing in the background.</strong> You can leave this page — we’ll transcribe and generate clips automatically. Status updates every few seconds.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, requireAuth } from "@/lib/auth";
 import { getStorage } from "@/lib/storage";
+import { toUserFriendlyError } from "@/lib/errorMessages";
 
 function extractStorageKeyFromUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -31,6 +32,12 @@ export async function GET(
       clips: {
         orderBy: { startTime: "asc" },
       },
+      jobs: {
+        where: { status: "FAILED" },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        select: { error: true },
+      },
     },
   });
   if (!video) {
@@ -40,6 +47,9 @@ export async function GET(
   if (video.userId && video.userId !== session?.user?.id) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
+  const rawError = video.status === "ERROR" ? video.jobs[0]?.error ?? null : null;
+  const errorDisplay = rawError ? toUserFriendlyError(rawError) : null;
+
   return NextResponse.json({
     id: video.id,
     title: video.title,
@@ -57,6 +67,8 @@ export async function GET(
       status: c.status,
       outputUrl: c.outputUrl,
     })),
+    errorMessage: rawError,
+    errorDisplay,
   });
 }
 

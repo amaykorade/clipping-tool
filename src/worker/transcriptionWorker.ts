@@ -1,4 +1,4 @@
-import { JobType, JobStatus, VideoStatus } from "@/generated/prisma";
+import { JobType, JobStatus, VideoStatus, ClipStatus } from "@/generated/prisma";
 import {
   startTranscriptionFromBuffer,
   extractAudioAndStartTranscription,
@@ -193,13 +193,28 @@ export const videoWorker = new Worker<VideoJobData>(
       return await handleVideoJob(job);
     } catch (error) {
       console.error("[Worker] Job failed", job.id, error);
+      const errMsg = (error as Error).message;
       await prisma.job.update({
         where: { id: job.id as string },
         data: {
           status: JobStatus.FAILED,
-          error: (error as Error).message,
+          error: errMsg,
         },
       });
+      // Update Video to ERROR so the frontend stops polling and shows the failure
+      if (job.data.videoId) {
+        await prisma.video.update({
+          where: { id: job.data.videoId },
+          data: { status: VideoStatus.ERROR },
+        }).catch(() => {});
+      }
+      // Update Clip to ERROR if this was a clip render job
+      if (job.data.clipId) {
+        await prisma.clip.update({
+          where: { id: job.data.clipId },
+          data: { status: ClipStatus.ERROR },
+        }).catch(() => {});
+      }
       throw error;
     }
   },
