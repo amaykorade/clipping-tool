@@ -8,7 +8,10 @@ async function waitForRedis(): Promise<void> {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy: () => null,
-    connectTimeout: 3000,
+    connectTimeout: 10000,
+    ...(REDIS_URL.startsWith("rediss://") && {
+      tls: { rejectUnauthorized: true },
+    }),
   });
 
   return new Promise((resolve, reject) => {

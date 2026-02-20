@@ -1,4 +1,4 @@
-# Clipflow: Clip Generation Pipeline
+# Kllivo: Clip Generation Pipeline
 
 This document describes **what we currently implement** and **what we should do properly** to get human-quality shorts from long videos. Use it as the single source of truth when iterating on clip quality.
 

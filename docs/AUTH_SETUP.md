@@ -1,6 +1,6 @@
 # Google Login Setup
 
-Clipflow uses **NextAuth.js** with **Google OAuth** so users can sign in and have their videos saved under their account.
+Kllivo uses **NextAuth.js** with **Google OAuth** so users can sign in and have their videos saved under their account.
 
 ## 1. Google Cloud Console
 
@@ -27,7 +27,7 @@ NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=generate_a_random_string_32_chars_min
 ```
 
-For production, set `NEXTAUTH_URL` to your app URL (e.g. `https://clipflow.vercel.app`).  
+For production, set `NEXTAUTH_URL` to your app URL (e.g. `https://kllivo.vercel.app`).  
 Generate a secret: `openssl rand -base64 32`.
 
 ## 3. Database migration

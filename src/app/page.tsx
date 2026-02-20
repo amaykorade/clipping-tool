@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getBaseUrl } from "@/lib/seo";
 
 export default async function Home({
   searchParams,
@@ -7,9 +8,43 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const showSignInPrompt = params?.upload === "signin";
+  const baseUrl = getBaseUrl();
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "Kllivo",
+        description: "Turn long-form video into Reels, TikTok & YouTube Shorts.",
+        publisher: { "@id": `${baseUrl}/#organization` },
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${baseUrl}/#application`,
+        name: "Kllivo",
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Web",
+        description: "AI-powered video clip generator. Upload long-form videos, get 9:16 clips for Reels, TikTok and YouTube Shorts.",
+        url: baseUrl,
+      },
+      {
+        "@type": "Organization",
+        "@id": `${baseUrl}/#organization`,
+        name: "Kllivo",
+        url: baseUrl,
+      },
+    ],
+  };
 
   return (
     <div className="min-h-[calc(100vh-8rem)] -mb-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {showSignInPrompt && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Please sign in with Google to upload videos. Use the button in the top right to sign in, then try again.
@@ -200,7 +235,7 @@ export default async function Home({
           <div className="mx-auto max-w-5xl">
             <div className="flex flex-col items-center gap-10 border-b border-slate-700/60 pb-12 sm:flex-row sm:items-start sm:justify-between sm:pb-14">
               <Link href="/" className="text-xl font-semibold tracking-tight text-white">
-                Clipflow
+                Kllivo
               </Link>
               <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-1 sm:justify-end">
                 <Link href="/upload" className="text-sm text-slate-400 transition hover:text-white">Upload</Link>
@@ -215,7 +250,7 @@ export default async function Home({
                 Long-form to short-form. Reels, TikTok, YouTube Shorts.
               </p>
               <p className="text-sm text-slate-500">
-                © {new Date().getFullYear()} Clipflow
+                © {new Date().getFullYear()} Kllivo
               </p>
             </div>
           </div>

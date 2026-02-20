@@ -16,18 +16,19 @@ let _videoQueue: Queue<VideoJobData> | null = null;
 
 function getVideoQueue(): Queue<VideoJobData> {
   if (!_videoQueue) {
-    const connection = new IORedis(
-      process.env.REDIS_URL || "redis://127.0.0.1:6379",
-      {
-        maxRetriesPerRequest: null,
-        enableReadyCheck: false,
-        retryStrategy(times) {
-          const delay = Math.min(times * 500, 5000);
-          return delay;
-        },
-        enableOfflineQueue: true,
+    const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+    const connection = new IORedis(redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      retryStrategy(times) {
+        const delay = Math.min(times * 500, 5000);
+        return delay;
       },
-    );
+      enableOfflineQueue: true,
+      ...(redisUrl.startsWith("rediss://") && {
+        tls: { rejectUnauthorized: true },
+      }),
+    });
     _videoQueue = new Queue<VideoJobData>(VIDEO_QUEUE_NAME, {
       connection,
       defaultJobOptions: {

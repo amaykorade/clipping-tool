@@ -1,6 +1,6 @@
-# Clipflow Deployment Guide
+# Kllivo Deployment Guide
 
-A step-by-step explanation of how we deployed Clipflow and **why** each piece exists.
+A step-by-step explanation of how we deployed Kllivo and **why** each piece exists.
 
 ---
 
@@ -57,22 +57,22 @@ Internet (User's browser)
 ```
 /etc/nginx/
 ├── sites-available/    ← All configs live here (enabled or not)
-│   └── clipflow       ← Our config file
+│   └── kllivo       ← Our config file
 └── sites-enabled/     ← Symlinks to configs that are ACTIVE
-    └── clipflow -> ../sites-available/clipflow
+    └── kllivo -> ../sites-available/kllivo
 ```
 
 **Why this split?**
 - `sites-available`: Store configs without enabling them.
 - `sites-enabled`: Only symlinked configs are loaded. Easy to enable/disable a site:
   ```bash
-  sudo ln -s /etc/nginx/sites-available/clipflow /etc/nginx/sites-enabled/   # enable
-  sudo rm /etc/nginx/sites-enabled/clipflow                                   # disable
+  sudo ln -s /etc/nginx/sites-available/kllivo /etc/nginx/sites-enabled/   # enable
+  sudo rm /etc/nginx/sites-enabled/kllivo                                   # disable
   ```
 
 **`sudo rm /etc/nginx/sites-enabled/default`**
 - The default Nginx site shows a placeholder page and listens on port 80.
-- If we keep it, it could catch traffic meant for Clipflow. Removing it ensures port 80 goes only to our app.
+- If we keep it, it could catch traffic meant for Kllivo. Removing it ensures port 80 goes only to our app.
 
 ---
 
@@ -149,7 +149,7 @@ npm run start    # Serves the built app
 - `pm2 logs` for debugging.
 
 ```bash
-pm2 start npm --name "clipflow" -- start
+pm2 start npm --name "kllivo" -- start
 pm2 save
 pm2 startup
 ```
@@ -158,7 +158,7 @@ pm2 startup
 
 ## 7. Why the Worker? (Background Jobs)
 
-Clipflow uses **BullMQ + Redis** for:
+Kllivo uses **BullMQ + Redis** for:
 - Video transcription (AssemblyAI)
 - Clip generation
 - Rendering clips to video files
@@ -172,7 +172,7 @@ Clipflow uses **BullMQ + Redis** for:
 
 ```bash
 # Run worker in a separate terminal or via PM2
-pm2 start npm --name "clipflow-worker" -- run worker
+pm2 start npm --name "kllivo-worker" -- run worker
 ```
 
 ---
@@ -195,10 +195,10 @@ On the server, you need the same `.env` as locally:
 | Step | Command / Action |
 |------|------------------|
 | 1. Build | `npm run build` |
-| 2. Start app | `npm run start` or `pm2 start npm --name "clipflow" -- start` |
-| 3. Start worker | `npm run worker` or `pm2 start npm --name "clipflow-worker" -- run worker` |
-| 4. Nginx config | `/etc/nginx/sites-available/clipflow` with `proxy_pass http://127.0.0.1:3000` |
-| 5. Enable site | `sudo ln -s /etc/nginx/sites-available/clipflow /etc/nginx/sites-enabled/` |
+| 2. Start app | `npm run start` or `pm2 start npm --name "kllivo" -- start` |
+| 3. Start worker | `npm run worker` or `pm2 start npm --name "kllivo-worker" -- run worker` |
+| 4. Nginx config | `/etc/nginx/sites-available/kllivo` with `proxy_pass http://127.0.0.1:3000` |
+| 5. Enable site | `sudo ln -s /etc/nginx/sites-available/kllivo /etc/nginx/sites-enabled/` |
 | 6. Remove default | `sudo rm /etc/nginx/sites-enabled/default` |
 | 7. Test Nginx | `sudo nginx -t` |
 | 8. Reload Nginx | `sudo systemctl reload nginx` |

@@ -28,7 +28,7 @@ RAZORPAY_WEBHOOK_SECRET=...         # From Webhooks → Add secret
 
 **Starter plan ($19/month):**
 
-- **Plan name:** e.g. `Clipflow Starter` or `Starter $19/mo`
+- **Plan name:** e.g. `Kllivo Starter` or `Starter $19/mo`
 - **Amount:**  
   - INR: `1900` (₹19 = 1900 paise)  
   - USD: `1900` (if using USD, $19 = 1900 cents — check your account currency)
@@ -39,7 +39,7 @@ RAZORPAY_WEBHOOK_SECRET=...         # From Webhooks → Add secret
 **Pro plan ($49/month):**
 
 - Create another plan the same way.
-- **Plan name:** e.g. `Clipflow Pro` or `Pro $49/mo`
+- **Plan name:** e.g. `Kllivo Pro` or `Pro $49/mo`
 - **Amount:**  
   - INR: `4900` (₹49)  
   - USD: `4900` ($49 in cents if applicable)
@@ -58,7 +58,7 @@ RAZORPAY_WEBHOOK_SECRET=...         # From Webhooks → Add secret
 2. Click **+ Add New Webhook**.
 3. **Webhook URL:**  
    `https://your-domain.com/api/webhooks/razorpay`  
-   (Replace `your-domain.com` with your real domain, e.g. `app.clipflow.com`. For local testing you can use a tunnel like ngrok: `https://abc123.ngrok.io/api/webhooks/razorpay`.)
+   (Replace `your-domain.com` with your real domain, e.g. `app.kllivo.com`. For local testing you can use a tunnel like ngrok: `https://abc123.ngrok.io/api/webhooks/razorpay`.)
 4. **Alert email:** Your email (for delivery failures).
 5. **Active events** — enable these four:
    - `subscription.activated`
@@ -85,7 +85,7 @@ RAZORPAY_WEBHOOK_SECRET=...
 
 ## Limits enforced
 
-- **Upload:** Video count and max duration checked in `processVideoUpload` (and plan limits in `src/lib/plans.ts`).
+- **Upload:** Video count and max duration checked in `savePendingUpload` / `finalizePendingUpload` (and plan limits in `src/lib/plans.ts`).
 - **Clip download:** Free plan limited to 1 download per month; usage in `User.clipDownloadsUsedThisMonth` / `clipDownloadsPeriodStart`.
-- **Watermark:** Free plan clips get a "Clipflow" drawtext overlay in `renderClip` (see `src/lib/video/processing.ts`).
+- **Watermark:** Free plan clips get a "Kllivo" drawtext overlay in `renderClip` (see `src/lib/video/processing.ts`).
 - **Job priority:** Transcribe jobs get BullMQ priority from plan (Free=3, Starter=2, Pro=1; lower = run first).

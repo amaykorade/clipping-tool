@@ -1,7 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getSession } from "@/lib/auth";
 import { PLAN_LIMITS } from "@/lib/plans";
 import PricingClient from "./PricingClient";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple pricing for Kllivo. Start free, upgrade for more videos and faster processing. Reels, TikTok & YouTube Shorts.",
+  openGraph: {
+    title: "Pricing | Kllivo",
+    description:
+      "Start free. Upgrade when you need more videos and faster processing.",
+  },
+};
 
 export default async function PricingPage() {
   const session = await getSession();

@@ -10,33 +10,6 @@ export type { Video, Clip, Job };
 // Enums: types + runtime values
 export { VideoStatus, ClipStatus, AspectRatio };
 
-export interface VideoWithClips extends Video {
-  clips: Clip[];
-  _count: {
-    clips: number;
-  };
-}
-
-export interface JobWithVideo extends Job {
-  video: Video | null;
-}
-
-export interface UploadVideoRequest {
-  title: string;
-  file?: File;
-  youtubeUrl?: string;
-}
-
-export interface UploadVideoResponse {
-  video: Video;
-  jobId: string;
-}
-
-export interface GenerateClipsResponse {
-  clips: Clip[];
-  jobId: string;
-}
-
 export interface TranscriptWord {
   text: string;
   start: number;

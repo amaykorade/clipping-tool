@@ -12,7 +12,7 @@ export interface RenderClipOptions {
   endTime: number;
   crop?: CropOptions;
   captions?: CaptionOptions;
-  /** When true, overlay a "Clipflow" watermark (e.g. for free plan). */
+  /** When true, overlay a "Kllivo" watermark (e.g. for free plan). */
   watermark?: boolean;
 }
 
@@ -101,7 +101,7 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
  * Build watermark drawtext filter (bottom-right, semi-transparent).
  */
 function buildWatermarkFilter(): string {
-  const text = "Clipflow";
+  const text = "Kllivo";
   const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
   return `drawtext=text='${escaped}':x=w-tw-24:y=h-th-16:fontsize=22:fontcolor=white@0.6:bordercolor=black@0.4:borderw=1`;
 }

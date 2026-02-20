@@ -50,7 +50,7 @@ export default function Navbar() {
           href="/"
           className="flex shrink-0 items-center gap-2 font-semibold text-slate-900 transition hover:text-indigo-600"
         >
-          <span className="text-xl tracking-tight">Clipflow</span>
+          <span className="text-xl tracking-tight">Kllivo</span>
         </Link>
 
         {/* Desktop nav */}

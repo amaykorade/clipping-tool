@@ -1,4 +1,4 @@
-# S3 Setup Guide for Clipflow
+# S3 Setup Guide for Kllivo
 
 This guide walks you through setting up AWS S3 for direct-to-cloud video uploads. With S3, the browser uploads files **directly** to S3 (bypassing your server), which eliminates 504 timeouts and reduces server load.
 
@@ -7,7 +7,7 @@ This guide walks you through setting up AWS S3 for direct-to-cloud video uploads
 ## 1. Create an S3 Bucket
 
 1. Go to **AWS Console** → **S3** → **Create bucket**
-2. **Bucket name:** `clipflow-uploads` (or your preferred name; must be globally unique)
+2. **Bucket name:** `kllivo-uploads` (or your preferred name; must be globally unique)
 3. **Region:** Choose one close to your users (e.g. `ap-south-1` for India)
 4. **Block Public Access:** Keep **all 4** checkboxes **enabled** (we use presigned URLs, no public access needed)
 5. **Bucket Versioning:** Disabled (optional)
@@ -43,15 +43,15 @@ Replace `kllivo.com` with your domain. Add `http://localhost:3000` for local dev
 ## 3. Create an IAM User for S3 Access
 
 1. Go to **IAM** → **Users** → **Create user**
-2. **User name:** `clipflow-s3`
+2. **User name:** `kllivo-s3`
 3. Click **Next**
 4. **Attach policies:** Choose **Create policy** (opens new tab)
    - Service: **S3**
    - Actions: `GetObject`, `PutObject`, `DeleteObject`, `HeadObject`
-   - Resources: Select your bucket (`arn:aws:s3:::clipflow-uploads/*`)
-   - Policy name: `ClipflowS3Policy`
+   - Resources: Select your bucket (`arn:aws:s3:::kllivo-uploads/*`)
+   - Policy name: `KllivoS3Policy`
    - Create policy
-5. Go back to the user creation tab, refresh policies, select `ClipflowS3Policy`
+5. Go back to the user creation tab, refresh policies, select `KllivoS3Policy`
 6. **Create user**
 7. Open the user → **Security credentials** → **Create access key**
    - Use case: **Application running outside AWS**
@@ -65,7 +65,7 @@ On your **EC2 server** (and locally for testing), add to `.env`:
 
 ```env
 STORAGE_TYPE=s3
-AWS_S3_BUCKET=clipflow-uploads
+AWS_S3_BUCKET=kllivo-uploads
 AWS_REGION=ap-south-1
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
@@ -85,7 +85,7 @@ cd ~/clipping-tool
 git pull
 npm install
 npm run build
-pm2 restart clipflow-web clipflow-worker
+pm2 restart kllivo-web kllivo-worker
 ```
 
 2. Upload a video. The flow should be:

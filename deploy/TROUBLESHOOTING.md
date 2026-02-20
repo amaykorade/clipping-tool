@@ -1,4 +1,4 @@
-# Clipflow Deployment Troubleshooting
+# Kllivo Deployment Troubleshooting
 
 ## "Site can't be reached" Checklist
 
@@ -19,7 +19,7 @@ npm run start   # runs on port 3000
 Or use PM2 to keep it running:
 ```bash
 npm install -g pm2
-pm2 start npm --name "clipflow" -- start
+pm2 start npm --name "kllivo" -- start
 pm2 save
 pm2 startup   # enable on reboot
 ```
@@ -29,7 +29,7 @@ pm2 startup   # enable on reboot
 - **AWS Security Group:** Ensure inbound rules allow TCP port 80 (and 443 if using HTTPS) from 0.0.0.0/0 or your IP
 
 ### 4. Verify Nginx config
-Your `/etc/nginx/sites-available/clipflow` should proxy to port 3000:
+Your `/etc/nginx/sites-available/kllivo` should proxy to port 3000:
 ```nginx
 proxy_pass http://127.0.0.1:3000;
 ```

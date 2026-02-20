@@ -13,19 +13,19 @@ import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTransc
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
 
-const connection = new IORedis(
-  process.env.REDIS_URL || "redis://127.0.0.1:6379",
-  {
-    // Required by BullMQ when using ioredis
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    retryStrategy(times) {
-      const delay = Math.min(times * 500, 5000);
-      return delay;
-    },
-    enableOfflineQueue: true,
+const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+const connection = new IORedis(redisUrl, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  retryStrategy(times) {
+    const delay = Math.min(times * 500, 5000);
+    return delay;
   },
-);
+  enableOfflineQueue: true,
+  ...(redisUrl.startsWith("rediss://") && {
+    tls: { rejectUnauthorized: true },
+  }),
+});
 
 async function handleVideoJob(job: Job<VideoJobData>) {
   const { type, videoId, clipId } = job.data;
