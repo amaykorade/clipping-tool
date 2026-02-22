@@ -56,21 +56,24 @@ export async function createSubscription(params: {
   notes: Record<string, string>;
   notifyEmail?: string;
 }): Promise<{ id: string; short_url?: string }> {
+  const keyId = getRazorpayKeyId();
+  const requestBody = {
+    plan_id: params.planId,
+    customer_id: params.customerId,
+    total_count: 120,
+    quantity: 1,
+    customer_notify: 1,
+    notes: params.notes,
+    notify_info: params.notifyEmail ? { notify_email: params.notifyEmail } : undefined,
+  };
+  console.log("[Razorpay] createSubscription — keyId:", keyId, "body:", JSON.stringify(requestBody));
   const res = await fetch(`${BASE}/subscriptions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: authHeader(),
     },
-    body: JSON.stringify({
-      plan_id: params.planId,
-      customer_id: params.customerId,
-      total_count: 120, // 120 months (~10 years) — effectively indefinite
-      quantity: 1,
-      customer_notify: 1,
-      notes: params.notes,
-      notify_info: params.notifyEmail ? { notify_email: params.notifyEmail } : undefined,
-    }),
+    body: JSON.stringify(requestBody),
   });
   if (!res.ok) {
     const err = await res.text();
