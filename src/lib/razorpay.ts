@@ -42,12 +42,28 @@ export async function createCustomer(email: string, name: string | null): Promis
     },
     body: JSON.stringify({ email, name: name || undefined }),
   });
+
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Razorpay create customer failed: ${res.status} ${err}`);
+    const body = await res.json() as { error?: { description?: string; code?: string } };
+    // If customer already exists, fetch them by email instead
+    if (body?.error?.description?.includes("Customer already exists")) {
+      const existing = await fetchCustomerByEmail(email);
+      if (existing) return existing;
+    }
+    throw new Error(`Razorpay create customer failed: ${res.status} ${JSON.stringify(body)}`);
   }
   const data = (await res.json()) as { id: string };
   return data;
+}
+
+async function fetchCustomerByEmail(email: string): Promise<{ id: string } | null> {
+  const res = await fetch(
+    `${BASE}/customers?email=${encodeURIComponent(email)}&count=1`,
+    { headers: { Authorization: authHeader() } }
+  );
+  if (!res.ok) return null;
+  const data = (await res.json()) as { items?: { id: string }[] };
+  return data?.items?.[0] ?? null;
 }
 
 export async function createSubscription(params: {
