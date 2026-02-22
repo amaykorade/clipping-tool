@@ -32,7 +32,12 @@ export async function POST(request: NextRequest) {
     const { plan } = parsed.data;
     const planId = getPlanId(plan);
 
-    let customerId = user.razorpayCustomerId ?? null;
+    // Treat the literal string "NULL" (from a previous bad DB write) as missing
+    let customerId =
+      user.razorpayCustomerId && user.razorpayCustomerId !== "NULL"
+        ? user.razorpayCustomerId
+        : null;
+
     if (!customerId) {
       const customer = await createCustomer(user.email ?? "", user.name ?? null);
       customerId = customer.id;
