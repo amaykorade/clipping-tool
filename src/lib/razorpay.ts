@@ -118,12 +118,18 @@ export async function cancelSubscription(
   }
 }
 
-export function getPlanId(plan: "STARTER" | "PRO"): string {
-  const id =
-    plan === "STARTER"
-      ? process.env.RAZORPAY_PLAN_STARTER_ID
+export function getPlanId(plan: "STARTER" | "PRO", billing: "monthly" | "yearly" = "monthly"): string {
+  let id: string | undefined;
+  if (plan === "STARTER") {
+    id = billing === "yearly"
+      ? process.env.RAZORPAY_PLAN_STARTER_YEARLY_ID || process.env.RAZORPAY_PLAN_STARTER_ID
+      : process.env.RAZORPAY_PLAN_STARTER_ID;
+  } else {
+    id = billing === "yearly"
+      ? process.env.RAZORPAY_PLAN_PRO_YEARLY_ID || process.env.RAZORPAY_PLAN_PRO_ID
       : process.env.RAZORPAY_PLAN_PRO_ID;
-  if (!id) throw new Error(`Razorpay plan ID not configured for ${plan}`);
+  }
+  if (!id) throw new Error(`Razorpay plan ID not configured for ${plan} ${billing}`);
   return id;
 }
 

@@ -1,9 +1,13 @@
 /**
  * Plan limits and metadata.
- * Free, Starter ($19/mo), Pro ($49/mo).
+ * Free, Starter ($19/mo or $152/yr — save 33%), Pro ($49/mo or $392/yr — save 33%).
  */
 
 export type Plan = "FREE" | "STARTER" | "PRO";
+export type BillingPeriod = "monthly" | "yearly";
+
+/** Yearly discount: 2 months free (~33% off) */
+export const YEARLY_DISCOUNT_MONTHS = 10; // pay for 10 months, get 12
 
 export const PLAN_LIMITS: Record<
   Plan,
@@ -17,34 +21,38 @@ export const PLAN_LIMITS: Record<
     jobPriority: number;
     label: string;
     priceMonthly: number | null;
+    priceYearly: number | null;
   }
 > = {
   FREE: {
     maxVideos: 1,
-    maxDurationSec: 20 * 60, // 20 min
-    maxClipDownloadsPerMonth: null, // unlimited
+    maxDurationSec: 20 * 60,
+    maxClipDownloadsPerMonth: null,
     watermark: true,
-    jobPriority: 3, // standard (lowest)
+    jobPriority: 3,
     label: "Free",
     priceMonthly: null,
+    priceYearly: null,
   },
   STARTER: {
     maxVideos: 10,
-    maxDurationSec: 60 * 60, // 60 min
+    maxDurationSec: 60 * 60,
     maxClipDownloadsPerMonth: null,
     watermark: false,
-    jobPriority: 2, // fast
+    jobPriority: 2,
     label: "Starter",
     priceMonthly: 19,
+    priceYearly: 19 * YEARLY_DISCOUNT_MONTHS, // $190/yr (~$15.83/mo)
   },
   PRO: {
     maxVideos: 25,
-    maxDurationSec: 3 * 60 * 60, // 3 hours
+    maxDurationSec: 3 * 60 * 60,
     maxClipDownloadsPerMonth: null,
     watermark: false,
-    jobPriority: 1, // priority (highest)
+    jobPriority: 1,
     label: "Pro",
     priceMonthly: 49,
+    priceYearly: 49 * YEARLY_DISCOUNT_MONTHS, // $490/yr (~$40.83/mo)
   },
 };
 
