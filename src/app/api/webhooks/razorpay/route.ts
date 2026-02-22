@@ -58,7 +58,11 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (event === "subscription.cancelled" || event === "subscription.completed") {
+  if (
+    event === "subscription.cancelled" ||
+    event === "subscription.completed" ||
+    event === "subscription.halted"
+  ) {
     if (userId) {
       await prisma.user.update({
         where: { id: userId },

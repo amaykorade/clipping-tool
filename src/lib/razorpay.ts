@@ -65,7 +65,7 @@ export async function createSubscription(params: {
     body: JSON.stringify({
       plan_id: params.planId,
       customer_id: params.customerId,
-      total_count: 12,
+      total_count: 120, // 120 months (~10 years) — effectively indefinite
       quantity: 1,
       customer_notify: 1,
       notes: params.notes,
