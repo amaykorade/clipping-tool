@@ -71,10 +71,8 @@ export async function createSubscription(params: {
   customerId: string;
   notes: Record<string, string>;
   notifyEmail?: string;
-  callbackUrl?: string;
 }): Promise<{ id: string; short_url?: string }> {
   const keyId = getRazorpayKeyId();
-  const baseUrl = process.env.NEXTAUTH_URL || "";
   const requestBody = {
     plan_id: params.planId,
     customer_id: params.customerId,
@@ -83,8 +81,6 @@ export async function createSubscription(params: {
     customer_notify: 1,
     notes: params.notes,
     notify_info: params.notifyEmail ? { notify_email: params.notifyEmail } : undefined,
-    callback_url: params.callbackUrl || `${baseUrl}/api/subscription/callback`,
-    callback_method: "get",
   };
   console.log("[Razorpay] createSubscription — keyId:", keyId, "body:", JSON.stringify(requestBody));
   const res = await fetch(`${BASE}/subscriptions`, {
