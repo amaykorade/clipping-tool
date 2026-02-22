@@ -18,6 +18,24 @@ type PlanRow = {
   popular?: boolean;
 };
 
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Razorpay: any;
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function PricingClient({
   plans,
   signedIn,
@@ -31,21 +49,48 @@ export default function PricingClient({
     if (plan === "FREE") return;
     setLoading(plan);
     try {
+      // Load Razorpay checkout script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error("Failed to load payment gateway. Please try again.");
+
+      // Create subscription on backend
       const res = await fetch("/api/subscription/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      if (data.shortUrl) {
-        window.location.href = data.shortUrl;
-        return;
-      }
-      throw new Error("No checkout URL");
+      if (!res.ok) throw new Error(data.error || "Failed to create subscription");
+
+      const { subscriptionId } = data;
+      if (!subscriptionId) throw new Error("No subscription ID returned");
+
+      // Open Razorpay checkout modal
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        subscription_id: subscriptionId,
+        name: "Kllivo",
+        description: `${plan.charAt(0) + plan.slice(1).toLowerCase()} Plan`,
+        handler: function () {
+          // Payment successful — webhook will update the plan in DB
+          window.location.href = "/account?payment=success";
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(null);
+          },
+        },
+        theme: { color: "#4f46e5" },
+      });
+
+      rzp.on("payment.failed", function () {
+        alert("Payment failed. Please try again.");
+        setLoading(null);
+      });
+
+      rzp.open();
     } catch (e) {
       alert((e as Error).message);
-    } finally {
       setLoading(null);
     }
   }
@@ -105,7 +150,7 @@ export default function PricingClient({
                       : "bg-slate-800 hover:bg-slate-700 disabled:opacity-70"
                   }`}
                 >
-                  {loading === p.id ? "Redirecting…" : `Upgrade to ${p.name}`}
+                  {loading === p.id ? "Opening payment…" : `Upgrade to ${p.name}`}
                 </button>
               ) : (
                 <Link

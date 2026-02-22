@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Plan } from "@/lib/plans";
 
 export default function AccountClient({
@@ -13,6 +13,15 @@ export default function AccountClient({
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      setPaymentSuccess(true);
+      window.history.replaceState({}, "", "/account");
+    }
+  }, []);
 
   async function handleCancel() {
     if (!confirm("Cancel your subscription? You’ll keep access until the end of the current billing period, then switch to the free plan.")) {
@@ -46,6 +55,11 @@ export default function AccountClient({
 
   return (
     <div className="flex flex-col gap-4">
+      {paymentSuccess && (
+        <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          Payment successful! Your plan has been upgraded. It may take a minute to reflect.
+        </div>
+      )}
       <p className="text-sm text-slate-600">
         You’re on the <strong>{plan}</strong> plan.
         {periodEnd && (
