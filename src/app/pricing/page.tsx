@@ -1,7 +1,7 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { prisma } from "@/lib/db";
 import PricingClient from "./PricingClient";
 
 export const metadata: Metadata = {
@@ -17,6 +17,15 @@ export const metadata: Metadata = {
 
 export default async function PricingPage() {
   const session = await getSession();
+
+  let currentPlan: "FREE" | "STARTER" | "PRO" = "FREE";
+  if (session?.user?.id) {
+    const rows = await prisma.$queryRaw<{ plan: string }[]>`
+      SELECT plan FROM "User" WHERE id = ${session.user.id}
+    `;
+    const p = rows?.[0]?.plan;
+    if (p === "STARTER" || p === "PRO") currentPlan = p;
+  }
 
   const plans = [
     {
@@ -68,7 +77,7 @@ export default async function PricingPage() {
         </p>
       </header>
 
-      <PricingClient plans={plans} signedIn={!!session?.user} />
+      <PricingClient plans={plans} signedIn={!!session?.user} currentPlan={currentPlan} />
     </div>
   );
 }

@@ -36,12 +36,16 @@ function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
+const PLAN_RANK: Record<PlanId, number> = { FREE: 0, STARTER: 1, PRO: 2 };
+
 export default function PricingClient({
   plans,
   signedIn,
+  currentPlan = "FREE",
 }: {
   plans: PlanRow[];
   signedIn: boolean;
+  currentPlan?: PlanId;
 }) {
   const [loading, setLoading] = useState<PlanId | null>(null);
 
@@ -132,14 +136,25 @@ export default function PricingClient({
               <li>Processing: {p.speed}</li>
             </ul>
             <div className="mt-8">
-              {p.id === "FREE" ? (
+              {!signedIn ? (
                 <Link
-                  href={signedIn ? "/upload" : "/"}
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  href="/"
+                  className="block w-full rounded-xl bg-indigo-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-500"
                 >
-                  {signedIn ? "Use free plan" : "Get started"}
+                  Sign in to get started
                 </Link>
-              ) : signedIn ? (
+              ) : p.id === currentPlan ? (
+                <div className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 py-3 text-sm font-semibold text-indigo-600">
+                  Current plan
+                </div>
+              ) : p.id === "FREE" ? (
+                <Link
+                  href="/account"
+                  className="block w-full rounded-xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
+                >
+                  Downgrade to Free
+                </Link>
+              ) : PLAN_RANK[p.id] > PLAN_RANK[currentPlan] ? (
                 <button
                   type="button"
                   onClick={() => handleUpgrade(p.id)}
@@ -154,10 +169,10 @@ export default function PricingClient({
                 </button>
               ) : (
                 <Link
-                  href="/"
-                  className="block w-full rounded-xl bg-indigo-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-500"
+                  href="/account"
+                  className="block w-full rounded-xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
                 >
-                  Sign in to upgrade
+                  Downgrade to {p.name}
                 </Link>
               )}
             </div>
