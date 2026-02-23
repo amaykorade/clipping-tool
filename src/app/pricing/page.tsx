@@ -4,6 +4,8 @@ import { PLAN_LIMITS } from "@/lib/plans";
 import { prisma } from "@/lib/db";
 import PricingClient from "./PricingClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Pricing",
   description:
@@ -23,7 +25,7 @@ export default async function PricingPage() {
     const rows = await prisma.$queryRaw<{ plan: string }[]>`
       SELECT plan FROM "User" WHERE id = ${session.user.id}
     `;
-    const p = rows?.[0]?.plan;
+    const p = String(rows?.[0]?.plan ?? "").trim().toUpperCase();
     if (p === "STARTER" || p === "PRO") currentPlan = p;
   }
 

@@ -6,7 +6,9 @@ import { PLAN_LIMITS } from "@/lib/plans";
 import type { Plan } from "@/lib/plans";
 import AccountClient from "./AccountClient";
 
-// Raw SQL for User/plan so we avoid Next.js serving a stale Prisma client (custom output + bundling).
+export const dynamic = "force-dynamic";
+
+// Raw SQL for User/plan so we avoid Next.js serving a stale Prisma client (custom output + bundling). so we avoid Next.js serving a stale Prisma client (custom output + bundling).
 type AccountUserRow = {
   name: string | null;
   email: string | null;

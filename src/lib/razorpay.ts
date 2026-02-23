@@ -78,7 +78,7 @@ export async function createSubscription(params: {
   const requestBody = {
     plan_id: params.planId,
     customer_id: params.customerId,
-    total_count: 120,
+    total_count: 100,  // Razorpay max for given period/interval
     quantity: 1,
     customer_notify: 1,
     notes: params.notes,
