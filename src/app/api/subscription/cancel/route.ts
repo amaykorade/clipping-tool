@@ -6,7 +6,7 @@ import { cancelSubscription } from "@/lib/razorpay";
 /**
  * POST /api/subscription/cancel
  * Cancels the current user's Razorpay subscription (at end of billing cycle by default).
- * Updates user to FREE after cancelling so UI reflects immediately; webhook will also set FREE.
+ * User keeps access until period end; webhook (subscription.completed) will set FREE.
  */
 export async function POST(request: Request) {
   try {
@@ -14,7 +14,6 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const cancelAtCycleEnd = body.cancel_at_cycle_end !== false;
 
-    // Raw SQL to avoid Next.js serving a stale Prisma client for User (custom output + bundling).
     const rows = await prisma.$queryRaw<
       { razorpaySubscriptionId: string | null }[]
     >`SELECT "razorpaySubscriptionId" FROM "User" WHERE id = ${auth.id}`;
@@ -31,16 +30,23 @@ export async function POST(request: Request) {
 
     await cancelSubscription(user.razorpaySubscriptionId, cancelAtCycleEnd);
 
-    await prisma.$executeRaw`
-      UPDATE "User"
-      SET plan = 'FREE', "razorpaySubscriptionId" = NULL, "subscriptionCurrentPeriodEnd" = NULL
-      WHERE id = ${auth.id}
-    `;
+    if (cancelAtCycleEnd) {
+      await prisma.$executeRaw`
+        UPDATE "User" SET "subscriptionCancelledAtPeriodEnd" = true WHERE id = ${auth.id}
+      `;
+    } else {
+      await prisma.$executeRaw`
+        UPDATE "User"
+        SET plan = 'FREE', "billingInterval" = NULL, "razorpaySubscriptionId" = NULL,
+            "subscriptionCurrentPeriodEnd" = NULL, "subscriptionCancelledAtPeriodEnd" = false
+        WHERE id = ${auth.id}
+      `;
+    }
 
     return NextResponse.json({
       ok: true,
       message: cancelAtCycleEnd
-        ? "Subscription will cancel at the end of the current billing period."
+        ? "Subscription will cancel at the end of the current billing period. You keep access until then."
         : "Subscription cancelled.",
     });
   } catch (e) {

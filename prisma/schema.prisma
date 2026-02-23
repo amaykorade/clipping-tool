@@ -33,13 +33,23 @@ model User {
 
   // Subscription (plan & Razorpay)
   plan                      Plan      @default(FREE)
+  billingInterval           String?   // 'monthly' | 'yearly'; null for FREE
   razorpayCustomerId        String?
   razorpaySubscriptionId    String?
   subscriptionCurrentPeriodEnd DateTime?
+  // Pending switch: new subscription starts when current period ends
+  nextRazorpaySubscriptionId    String?
+  nextPlan                      String?   // 'STARTER' | 'PRO'
+  nextBillingInterval           String?   // 'monthly' | 'yearly'
+  nextSubscriptionPeriodEnd     DateTime?
+  subscriptionCancelledAtPeriodEnd Boolean @default(false) // User cancelled; access until period end
 
   // Free plan: 1 clip download per month
   clipDownloadsUsedThisMonth Int      @default(0)
   clipDownloadsPeriodStart   DateTime?
+
+  // Plan limit: total videos ever uploaded (lifetime; deleting does not free slots)
+  totalVideosUploaded        Int      @default(0)
 }
 
 model Account {

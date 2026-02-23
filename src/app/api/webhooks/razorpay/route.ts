@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/razorpay";
+import { cancelSubscription, planIdToTierAndBilling, verifyWebhookSignature } from "@/lib/razorpay";
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -44,35 +44,129 @@ export async function POST(request: NextRequest) {
     if (!sub || !userId) {
       return NextResponse.json({ ok: true });
     }
-    const planId = sub.plan_id;
+    const tierAndBilling = planIdToTierAndBilling(sub.plan_id);
+    if (!tierAndBilling) {
+      return NextResponse.json({ ok: true });
+    }
     const periodEnd = sub.current_end;
-    const plan =
-      planId === process.env.RAZORPAY_PLAN_STARTER_ID ? "STARTER" : "PRO";
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        plan,
-        razorpaySubscriptionId: sub.id,
-        subscriptionCurrentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
-      },
-    });
-  }
 
-  if (
-    event === "subscription.cancelled" ||
-    event === "subscription.completed" ||
-    event === "subscription.halted"
-  ) {
-    if (userId) {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { razorpaySubscriptionId: true },
+    });
+    const oldSubId = existing?.razorpaySubscriptionId;
+
+    if (oldSubId && oldSubId !== sub.id) {
+      // User has existing subscription (switch billing): new subscription starts after current period ends
+      // Store new sub as "next", cancel old at cycle end
+      try {
+        await cancelSubscription(oldSubId, true);
+      } catch (e) {
+        console.error("[Webhook] Failed to cancel old subscription at cycle end:", oldSubId, e);
+      }
       await prisma.user.update({
         where: { id: userId },
         data: {
-          plan: "FREE",
-          razorpaySubscriptionId: null,
-          subscriptionCurrentPeriodEnd: null,
+          nextRazorpaySubscriptionId: sub.id,
+          nextPlan: tierAndBilling.plan,
+          nextBillingInterval: tierAndBilling.billing,
+          nextSubscriptionPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
+        },
+      });
+    } else {
+      // New subscription (no existing or same sub) or renewal: apply immediately, reset upload quota
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          plan: tierAndBilling.plan,
+          billingInterval: tierAndBilling.billing,
+          razorpaySubscriptionId: sub.id,
+          subscriptionCurrentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
+          nextRazorpaySubscriptionId: null,
+          nextPlan: null,
+          nextBillingInterval: null,
+          nextSubscriptionPeriodEnd: null,
+          totalVideosUploaded: 0, // fresh quota each billing cycle
         },
       });
     }
+  }
+
+  if (event === "subscription.completed") {
+    // Subscription has ended. Switch to "next" if any, else set FREE.
+    const completedSubId = sub?.id;
+    const completedUserId = userId ?? (sub?.notes?.userId as string | undefined);
+    if (!completedSubId || !completedUserId) {
+      return NextResponse.json({ ok: true });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: completedUserId },
+      select: {
+        razorpaySubscriptionId: true,
+        nextRazorpaySubscriptionId: true,
+        nextPlan: true,
+        nextBillingInterval: true,
+        nextSubscriptionPeriodEnd: true,
+      },
+    });
+    if (!user || user.razorpaySubscriptionId !== completedSubId) {
+      return NextResponse.json({ ok: true });
+    }
+    if (user.nextRazorpaySubscriptionId) {
+      // Switch to pending subscription; reset upload quota for new cycle
+      await prisma.user.update({
+        where: { id: completedUserId },
+        data: {
+          plan: user.nextPlan as "STARTER" | "PRO",
+          billingInterval: user.nextBillingInterval,
+          razorpaySubscriptionId: user.nextRazorpaySubscriptionId,
+          subscriptionCurrentPeriodEnd: user.nextSubscriptionPeriodEnd,
+          nextRazorpaySubscriptionId: null,
+          nextPlan: null,
+          nextBillingInterval: null,
+          nextSubscriptionPeriodEnd: null,
+          subscriptionCancelledAtPeriodEnd: false,
+          totalVideosUploaded: 0,
+        },
+      });
+    } else {
+      await prisma.user.update({
+        where: { id: completedUserId },
+        data: {
+          plan: "FREE",
+          billingInterval: null,
+          razorpaySubscriptionId: null,
+          subscriptionCurrentPeriodEnd: null,
+          subscriptionCancelledAtPeriodEnd: false,
+        },
+      });
+    }
+  }
+
+  if (event === "subscription.cancelled" || event === "subscription.halted") {
+    // Only set FREE if this is current sub AND no pending switch (immediate cancel)
+    const cancelledSubId = sub?.id;
+    const cancelledUserId = userId ?? (sub?.notes?.userId as string | undefined);
+    if (!cancelledSubId || !cancelledUserId) {
+      return NextResponse.json({ ok: true });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: cancelledUserId },
+      select: { razorpaySubscriptionId: true, nextRazorpaySubscriptionId: true },
+    });
+    if (!user || user.razorpaySubscriptionId !== cancelledSubId || user.nextRazorpaySubscriptionId) {
+      return NextResponse.json({ ok: true });
+    }
+    await prisma.user.update({
+      where: { id: cancelledUserId },
+      data: {
+        plan: "FREE",
+        billingInterval: null,
+        razorpaySubscriptionId: null,
+        subscriptionCurrentPeriodEnd: null,
+        subscriptionCancelledAtPeriodEnd: false,
+      },
+    });
   }
 
   return NextResponse.json({ ok: true });

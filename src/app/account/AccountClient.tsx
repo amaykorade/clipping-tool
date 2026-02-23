@@ -7,9 +7,11 @@ import type { Plan } from "@/lib/plans";
 export default function AccountClient({
   plan,
   periodEnd,
+  cancelledAtPeriodEnd = false,
 }: {
   plan: Plan;
   periodEnd: Date | null;
+  cancelledAtPeriodEnd?: boolean;
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
@@ -45,11 +47,19 @@ export default function AccountClient({
     }
   }
 
-  if (cancelSuccess) {
+  if (cancelSuccess || cancelledAtPeriodEnd) {
     return (
-      <p className="text-sm text-green-600">
-        Subscription will cancel at the end of the billing period.
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-amber-700 font-medium">
+          Subscription will end on{" "}
+          {periodEnd
+            ? new Date(periodEnd).toLocaleDateString(undefined, { dateStyle: "medium" })
+            : "the current period end"}.
+        </p>
+        <p className="text-sm text-slate-600">
+          You’ll keep access until then. No further charges will be made.
+        </p>
+      </div>
     );
   }
 

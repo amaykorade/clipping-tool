@@ -43,17 +43,21 @@ export default function PricingClient({
   plans,
   signedIn,
   currentPlan = "FREE",
+  currentBilling = null,
 }: {
   plans: PlanRow[];
   signedIn: boolean;
   currentPlan?: PlanId;
+  currentBilling?: "monthly" | "yearly" | null;
 }) {
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
-  const [loading, setLoading] = useState<PlanId | null>(null);
+  const [loading, setLoading] = useState<string | null>(null); // "STARTER" | "PRO" for upgrade; "STARTER-monthly" etc for switch
 
-  async function handleUpgrade(plan: PlanId) {
+  async function handleUpgrade(plan: PlanId, targetBilling?: BillingPeriod) {
     if (plan === "FREE") return;
-    setLoading(plan);
+    const billingToUse = targetBilling ?? billing;
+    const loadKey = `${plan}-${billingToUse}`;
+    setLoading(loadKey);
     try {
       const loaded = await loadRazorpayScript();
       if (!loaded) throw new Error("Failed to load payment gateway. Please try again.");
@@ -61,7 +65,7 @@ export default function PricingClient({
       const res = await fetch("/api/subscription/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, billing }),
+        body: JSON.stringify({ plan, billing: billingToUse }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create subscription");
@@ -73,7 +77,7 @@ export default function PricingClient({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         subscription_id: subscriptionId,
         name: "Kllivo",
-        description: `${plan} Plan (${billing === "yearly" ? "Annual" : "Monthly"})`,
+        description: `${plan} Plan (${billingToUse === "yearly" ? "Annual" : "Monthly"})`,
         handler: function () {
           window.location.href = "/account?payment=success";
         },
@@ -138,6 +142,7 @@ export default function PricingClient({
       <div className="grid gap-8 md:grid-cols-3">
         {plans.map((p) => {
           const price = billing === "yearly" ? p.priceYearly : p.priceMonthly;
+          const maxVideos = billing === "yearly" && p.id !== "FREE" ? p.maxVideos * 12 : p.maxVideos;
           const monthlyEquiv =
             billing === "yearly" && p.priceYearly != null
               ? Math.round((p.priceYearly / 12) * 100) / 100
@@ -197,7 +202,7 @@ export default function PricingClient({
                 </div>
 
                 <ul className="mt-6 space-y-2 text-sm text-slate-700">
-                  <li>{p.maxVideos} video{p.maxVideos !== 1 ? "s" : ""} max</li>
+                  <li>{maxVideos} video{maxVideos !== 1 ? "s" : ""} max{billing === "yearly" && p.id !== "FREE" ? " per year" : ""}</li>
                   <li>Up to {p.maxDurationMin} min per video</li>
                   <li>Unlimited clip downloads</li>
                   <li>{p.watermark ? "Watermark on clips" : "No watermark"}</li>
@@ -212,17 +217,26 @@ export default function PricingClient({
                     >
                       Sign in to get started
                     </Link>
-                  ) : p.id === currentPlan ? (
+                  ) : p.id === currentPlan && (currentBilling == null || billing === currentBilling) ? (
                     <div className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 py-3 text-sm font-semibold text-indigo-600">
                       Current plan
                     </div>
                   ) : p.id === "FREE" ? (
                     <Link
-                      href="/account"
+                      href="/account?downgrade=free"
                       className="block w-full rounded-xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
                     >
-                      Downgrade to Free
+                      Switch to Free
                     </Link>
+                  ) : p.id === currentPlan && billing !== (currentBilling ?? billing) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleUpgrade(p.id, billing)}
+                      disabled={loading !== null}
+                      className="w-full rounded-xl border-2 border-indigo-500 bg-indigo-50 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:opacity-70"
+                    >
+                      {loading === `${p.id}-${billing}` ? "Opening payment…" : `Switch to ${billing === "yearly" ? "yearly" : "monthly"}`}
+                    </button>
                   ) : PLAN_RANK[p.id] > PLAN_RANK[currentPlan] ? (
                     <button
                       type="button"
@@ -234,17 +248,24 @@ export default function PricingClient({
                           : "bg-slate-800 hover:bg-slate-700 disabled:opacity-70"
                       }`}
                     >
-                      {loading === p.id
+                      {loading?.startsWith(p.id)
                         ? "Opening payment…"
                         : `Upgrade to ${p.name}`}
                     </button>
                   ) : (
-                    <Link
-                      href="/account"
-                      className="block w-full rounded-xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
-                    >
-                      Downgrade to {p.name}
-                    </Link>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => handleUpgrade(p.id, billing)}
+                        disabled={loading !== null}
+                        className="block w-full rounded-xl border-2 border-slate-300 bg-white py-3 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-70"
+                      >
+                        {loading === `${p.id}-${billing}` ? "Opening payment…" : `Switch to ${p.name} (${billing === "yearly" ? "yearly" : "monthly"})`}
+                      </button>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Takes effect at end of current billing period.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

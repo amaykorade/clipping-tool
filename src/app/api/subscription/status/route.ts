@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { getMaxVideosForCycle, PLAN_LIMITS } from "@/lib/plans";
 
 /**
  * GET /api/subscription/status
@@ -14,15 +14,15 @@ export async function GET() {
     const rows = await prisma.$queryRaw<
       {
         plan: string;
+        billingInterval: string | null;
         subscriptionCurrentPeriodEnd: Date | null;
         clipDownloadsUsedThisMonth: number;
         clipDownloadsPeriodStart: Date | null;
-        video_count: number;
+        totalVideosUploaded: number;
       }[]
     >`
-      SELECT u.plan, u."subscriptionCurrentPeriodEnd", u."clipDownloadsUsedThisMonth",
-             u."clipDownloadsPeriodStart",
-             (SELECT COUNT(*)::int FROM "Video" v WHERE v."userId" = u.id) as video_count
+      SELECT u.plan, u."billingInterval", u."subscriptionCurrentPeriodEnd", u."clipDownloadsUsedThisMonth",
+             u."clipDownloadsPeriodStart", u."totalVideosUploaded"
       FROM "User" u WHERE u.id = ${auth.id}
     `;
     const user = rows?.[0];
@@ -31,14 +31,18 @@ export async function GET() {
     }
 
     const limits = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS];
+    const maxVideos = getMaxVideosForCycle(
+      user.plan as keyof typeof PLAN_LIMITS,
+      user.billingInterval === "yearly" ? "yearly" : user.billingInterval === "monthly" ? "monthly" : null
+    );
     return NextResponse.json({
       plan: user.plan,
       label: limits.label,
-      maxVideos: limits.maxVideos,
+      maxVideos,
       maxDurationMin: Math.floor(limits.maxDurationSec / 60),
       maxClipDownloadsPerMonth: limits.maxClipDownloadsPerMonth,
       watermark: limits.watermark,
-      currentVideoCount: user.video_count,
+      totalVideosUploaded: user.totalVideosUploaded,
       subscriptionCurrentPeriodEnd: user.subscriptionCurrentPeriodEnd,
       clipDownloadsUsedThisMonth: user.clipDownloadsUsedThisMonth,
     });

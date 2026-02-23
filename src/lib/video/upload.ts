@@ -38,14 +38,15 @@ export async function savePendingUpload(
   const ext = path.extname(originalFileName);
   const pendingKey = `${PENDING_PREFIX}${videoId}${ext}`;
 
-  // Plan check: only video count (duration check happens in worker after we have metadata)
+  // Plan check: totalVideosUploaded (lifetime; duration check happens in worker)
   if (userId) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true, _count: { select: { videos: true } } },
+      select: { plan: true, totalVideosUploaded: true, billingInterval: true },
     });
     if (user) {
-      const check = canUploadVideo(user.plan, user._count.videos, 0);
+      const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
+      const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
       if (!check.ok) throw new Error(check.error);
     }
   }
@@ -56,18 +57,26 @@ export async function savePendingUpload(
     fileSize: fileBuffer.length,
   });
 
-  await prisma.video.create({
-    data: {
-      id: videoId,
-      title,
-      fileName: originalFileName,
-      fileSize: fileBuffer.length,
-      duration: 0,
-      storageKey: pendingKey,
-      thumbnailUrl: null,
-      status: "UPLOADED",
-      ...(userId && { userId }),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.video.create({
+      data: {
+        id: videoId,
+        title,
+        fileName: originalFileName,
+        fileSize: fileBuffer.length,
+        duration: 0,
+        storageKey: pendingKey,
+        thumbnailUrl: null,
+        status: "UPLOADED",
+        ...(userId && { userId }),
+      },
+    });
+    if (userId) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalVideosUploaded: { increment: 1 } },
+      });
+    }
   });
 
   return {
@@ -101,10 +110,11 @@ export async function createPendingUploadForDirectUpload(
   if (userId) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true, _count: { select: { videos: true } } },
+      select: { plan: true, totalVideosUploaded: true, billingInterval: true },
     });
     if (user) {
-      const check = canUploadVideo(user.plan, user._count.videos, 0);
+      const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
+      const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
       if (!check.ok) throw new Error(check.error);
     }
   }
@@ -115,18 +125,26 @@ export async function createPendingUploadForDirectUpload(
 
   const uploadUrl = await storage.getPresignedPutUrl(pendingKey, contentType);
 
-  await prisma.video.create({
-    data: {
-      id: videoId,
-      title,
-      fileName: originalFileName,
-      fileSize,
-      duration: 0,
-      storageKey: pendingKey,
-      thumbnailUrl: null,
-      status: "UPLOADED",
-      ...(userId && { userId }),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.video.create({
+      data: {
+        id: videoId,
+        title,
+        fileName: originalFileName,
+        fileSize,
+        duration: 0,
+        storageKey: pendingKey,
+        thumbnailUrl: null,
+        status: "UPLOADED",
+        ...(userId && { userId }),
+      },
+    });
+    if (userId) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalVideosUploaded: { increment: 1 } },
+      });
+    }
   });
 
   return { videoId, uploadUrl, storageKey: pendingKey };
@@ -155,12 +173,20 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
     if (video.userId) {
       const user = await prisma.user.findUnique({
         where: { id: video.userId },
-        select: { plan: true, _count: { select: { videos: true } } },
+        select: { plan: true, totalVideosUploaded: true, billingInterval: true },
       });
       if (user) {
         const durationSec = Math.ceil(metadata.duration);
-        const check = canUploadVideo(user.plan, user._count.videos, durationSec);
-        if (!check.ok) throw new Error(check.error);
+        const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
+        const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, durationSec, billing);
+        if (!check.ok) {
+          // Revert the increment from create (video will remain but user gets slot back)
+          await prisma.user.update({
+            where: { id: video.userId },
+            data: { totalVideosUploaded: { decrement: 1 } },
+          });
+          throw new Error(check.error);
+        }
       }
     }
 

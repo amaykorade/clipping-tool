@@ -25,8 +25,18 @@ export async function POST(request: NextRequest) {
 
     // Raw SQL to avoid Next.js serving a stale Prisma client for User (custom output + bundling).
     const rows = await prisma.$queryRaw<
-      { id: string; email: string | null; name: string | null; razorpayCustomerId: string | null }[]
-    >`SELECT id, email, name, "razorpayCustomerId" FROM "User" WHERE id = ${auth.id}`;
+      {
+        id: string;
+        email: string | null;
+        name: string | null;
+        razorpayCustomerId: string | null;
+        plan: string;
+        billingInterval: string | null;
+        razorpaySubscriptionId: string | null;
+        subscriptionCurrentPeriodEnd: Date | null;
+      }[]
+    >`SELECT id, email, name, "razorpayCustomerId", plan, "billingInterval",
+      "razorpaySubscriptionId", "subscriptionCurrentPeriodEnd" FROM "User" WHERE id = ${auth.id}`;
     const user = rows?.[0];
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -34,6 +44,19 @@ export async function POST(request: NextRequest) {
 
     const { plan, billing } = parsed.data;
     const planId = getPlanId(plan, billing);
+
+    // For existing subscribers switching plan/tier: schedule new subscription to start at period end
+    const currentPlan = (user.plan ?? "").toUpperCase() as "STARTER" | "PRO";
+    const currentBilling = (user.billingInterval ?? "").toLowerCase() as "monthly" | "yearly";
+    const isSwitch =
+      user.razorpaySubscriptionId &&
+      user.subscriptionCurrentPeriodEnd &&
+      (currentPlan !== plan || currentBilling !== billing);
+
+    const startAt =
+      isSwitch && user.subscriptionCurrentPeriodEnd
+        ? Math.floor(user.subscriptionCurrentPeriodEnd.getTime() / 1000)
+        : undefined;
 
     // Treat the literal string "NULL" (from a previous bad DB write) as missing
     let customerId =
@@ -52,6 +75,7 @@ export async function POST(request: NextRequest) {
       customerId,
       notes: { userId: user.id },
       notifyEmail: user.email ?? undefined,
+      startAt,
     });
 
     return NextResponse.json({

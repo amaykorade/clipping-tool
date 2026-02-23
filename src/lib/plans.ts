@@ -13,7 +13,7 @@ export const YEARLY_MONTHS_PAID = 10;
 export const PLAN_LIMITS: Record<
   Plan,
   {
-    maxVideos: number;
+    maxVideos: number; // per billing cycle; resets on renewal
     maxDurationSec: number;
     maxClipDownloadsPerMonth: number | null;
     watermark: boolean;
@@ -59,10 +59,29 @@ export function getPlanLimits(plan: Plan) {
   return PLAN_LIMITS[plan];
 }
 
-export function canUploadVideo(plan: Plan, currentVideoCount: number, durationSec: number): { ok: boolean; error?: string } {
+/** Effective video limit for the billing cycle. Yearly = monthly_limit * 12. */
+export function getMaxVideosForCycle(
+  plan: Plan,
+  billingInterval: "monthly" | "yearly" | null
+): number {
   const limits = getPlanLimits(plan);
-  if (currentVideoCount >= limits.maxVideos) {
-    return { ok: false, error: `Plan limit: ${limits.maxVideos} video${limits.maxVideos === 1 ? "" : "s"} max. Upgrade to add more.` };
+  if (plan === "FREE" || billingInterval !== "yearly") {
+    return limits.maxVideos;
+  }
+  return limits.maxVideos * 12;
+}
+
+/** totalVideosUploaded = uploads this billing cycle (resets when subscription renews) */
+export function canUploadVideo(
+  plan: Plan,
+  totalVideosUploaded: number,
+  durationSec: number,
+  billingInterval?: "monthly" | "yearly" | null
+): { ok: boolean; error?: string } {
+  const limits = getPlanLimits(plan);
+  const maxVideos = getMaxVideosForCycle(plan, billingInterval ?? null);
+  if (totalVideosUploaded >= maxVideos) {
+    return { ok: false, error: `Plan limit: ${maxVideos} video${maxVideos === 1 ? "" : "s"} per billing cycle. Upgrade to add more.` };
   }
   if (durationSec > limits.maxDurationSec) {
     const maxMin = Math.floor(limits.maxDurationSec / 60);

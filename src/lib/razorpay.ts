@@ -73,6 +73,8 @@ export async function createSubscription(params: {
   customerId: string;
   notes: Record<string, string>;
   notifyEmail?: string;
+  /** Unix timestamp; if set, subscription starts then (plan switch at period end) */
+  startAt?: number;
 }): Promise<{ id: string; short_url?: string }> {
   const keyId = getRazorpayKeyId();
   const requestBody = {
@@ -83,6 +85,7 @@ export async function createSubscription(params: {
     customer_notify: 1,
     notes: params.notes,
     notify_info: params.notifyEmail ? { notify_email: params.notifyEmail } : undefined,
+    ...(params.startAt != null && { start_at: params.startAt }),
   };
   console.log("[Razorpay] createSubscription — keyId:", keyId, "body:", JSON.stringify(requestBody));
   const res = await fetch(`${BASE}/subscriptions`, {
@@ -118,6 +121,25 @@ export async function cancelSubscription(
     const err = await res.text();
     throw new Error(`Razorpay cancel subscription failed: ${res.status} ${err}`);
   }
+}
+
+/**
+ * Map Razorpay plan_id to { plan, billingInterval }.
+ * Returns null if plan_id doesn't match any configured plan.
+ */
+export function planIdToTierAndBilling(planId: string): {
+  plan: "STARTER" | "PRO";
+  billing: "monthly" | "yearly";
+} | null {
+  const starter = process.env.RAZORPAY_PLAN_STARTER_ID;
+  const starterYearly = process.env.RAZORPAY_PLAN_STARTER_YEARLY_ID;
+  const pro = process.env.RAZORPAY_PLAN_PRO_ID;
+  const proYearly = process.env.RAZORPAY_PLAN_PRO_YEARLY_ID;
+  if (planId === starter) return { plan: "STARTER", billing: "monthly" };
+  if (planId === starterYearly) return { plan: "STARTER", billing: "yearly" };
+  if (planId === pro) return { plan: "PRO", billing: "monthly" };
+  if (planId === proYearly) return { plan: "PRO", billing: "yearly" };
+  return null;
 }
 
 export function getPlanId(plan: "STARTER" | "PRO", billing: "monthly" | "yearly" = "monthly"): string {

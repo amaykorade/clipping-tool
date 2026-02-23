@@ -21,12 +21,18 @@ export default async function PricingPage() {
   const session = await getSession();
 
   let currentPlan: "FREE" | "STARTER" | "PRO" = "FREE";
+  let currentBilling: "monthly" | "yearly" | null = null;
   if (session?.user?.id) {
-    const rows = await prisma.$queryRaw<{ plan: string }[]>`
-      SELECT plan FROM "User" WHERE id = ${session.user.id}
+    const rows = await prisma.$queryRaw<{ plan: string; billingInterval: string | null }[]>`
+      SELECT plan, "billingInterval" FROM "User" WHERE id = ${session.user.id}
     `;
-    const p = String(rows?.[0]?.plan ?? "").trim().toUpperCase();
-    if (p === "STARTER" || p === "PRO") currentPlan = p;
+    const row = rows?.[0];
+    const p = String(row?.plan ?? "").trim().toUpperCase();
+    if (p === "STARTER" || p === "PRO") {
+      currentPlan = p;
+      const bi = String(row?.billingInterval ?? "").trim().toLowerCase();
+      if (bi === "monthly" || bi === "yearly") currentBilling = bi;
+    }
   }
 
   const plans = [
@@ -79,7 +85,12 @@ export default async function PricingPage() {
         </p>
       </header>
 
-      <PricingClient plans={plans} signedIn={!!session?.user} currentPlan={currentPlan} />
+      <PricingClient
+        plans={plans}
+        signedIn={!!session?.user}
+        currentPlan={currentPlan}
+        currentBilling={currentBilling}
+      />
     </div>
   );
 }
