@@ -1,50 +1,57 @@
 /**
  * Plan limits and metadata.
- * Free, Starter ($19/mo), Pro ($49/mo).
+ * Free, Starter ($19/mo or $190/yr), Pro ($49/mo or $490/yr).
+ * Yearly: 2 months free (pay for 10, get 12).
  */
 
 export type Plan = "FREE" | "STARTER" | "PRO";
+export type BillingPeriod = "monthly" | "yearly";
+
+/** Pay for 10 months, get 12 — 2 months free */
+export const YEARLY_MONTHS_PAID = 10;
 
 export const PLAN_LIMITS: Record<
   Plan,
   {
     maxVideos: number;
     maxDurationSec: number;
-    /** null = unlimited */
     maxClipDownloadsPerMonth: number | null;
     watermark: boolean;
-    /** BullMQ priority: lower = run first. 3=standard, 2=fast, 1=priority */
     jobPriority: number;
     label: string;
     priceMonthly: number | null;
+    priceYearly: number | null;
   }
 > = {
   FREE: {
     maxVideos: 1,
-    maxDurationSec: 20 * 60, // 20 min
-    maxClipDownloadsPerMonth: null, // unlimited
+    maxDurationSec: 20 * 60,
+    maxClipDownloadsPerMonth: null,
     watermark: true,
-    jobPriority: 3, // standard (lowest)
+    jobPriority: 3,
     label: "Free",
     priceMonthly: null,
+    priceYearly: null,
   },
   STARTER: {
     maxVideos: 10,
-    maxDurationSec: 60 * 60, // 60 min
+    maxDurationSec: 60 * 60,
     maxClipDownloadsPerMonth: null,
     watermark: false,
-    jobPriority: 2, // fast
+    jobPriority: 2,
     label: "Starter",
     priceMonthly: 19,
+    priceYearly: 19 * YEARLY_MONTHS_PAID, // $190/yr
   },
   PRO: {
     maxVideos: 25,
-    maxDurationSec: 3 * 60 * 60, // 3 hours
+    maxDurationSec: 3 * 60 * 60,
     maxClipDownloadsPerMonth: null,
     watermark: false,
-    jobPriority: 1, // priority (highest)
+    jobPriority: 1,
     label: "Pro",
     priceMonthly: 49,
+    priceYearly: 49 * YEARLY_MONTHS_PAID, // $490/yr
   },
 };
 

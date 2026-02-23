@@ -1,6 +1,8 @@
 /**
  * Razorpay API helpers (subscriptions).
- * Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_PLAN_STARTER_ID, RAZORPAY_PLAN_PRO_ID.
+ * Env: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
+ *      RAZORPAY_PLAN_STARTER_ID, RAZORPAY_PLAN_PRO_ID (monthly),
+ *      RAZORPAY_PLAN_STARTER_YEARLY_ID, RAZORPAY_PLAN_PRO_YEARLY_ID (optional; falls back to monthly if unset).
  */
 
 const BASE = "https://api.razorpay.com/v1";
@@ -118,12 +120,20 @@ export async function cancelSubscription(
   }
 }
 
-export function getPlanId(plan: "STARTER" | "PRO"): string {
-  const id =
-    plan === "STARTER"
-      ? process.env.RAZORPAY_PLAN_STARTER_ID
-      : process.env.RAZORPAY_PLAN_PRO_ID;
-  if (!id) throw new Error(`Razorpay plan ID not configured for ${plan}`);
+export function getPlanId(plan: "STARTER" | "PRO", billing: "monthly" | "yearly" = "monthly"): string {
+  let id: string | undefined;
+  if (plan === "STARTER") {
+    id =
+      billing === "yearly"
+        ? (process.env.RAZORPAY_PLAN_STARTER_YEARLY_ID || process.env.RAZORPAY_PLAN_STARTER_ID)
+        : process.env.RAZORPAY_PLAN_STARTER_ID;
+  } else {
+    id =
+      billing === "yearly"
+        ? (process.env.RAZORPAY_PLAN_PRO_YEARLY_ID || process.env.RAZORPAY_PLAN_PRO_ID)
+        : process.env.RAZORPAY_PLAN_PRO_ID;
+  }
+  if (!id) throw new Error(`Razorpay plan ID not configured for ${plan} ${billing}`);
   return id;
 }
 
