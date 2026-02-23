@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import Link from "next/link";
 
 function toSameOriginUrl(url: string): string {
   try {
@@ -116,6 +115,7 @@ export default function VideoDetailPage({
   const [video, setVideo] = useState<{
     title: string;
     status: string;
+    transcribeProgress?: number | null;
     errorDisplay?: { title: string; message: string; action: string } | null;
   } | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
@@ -133,6 +133,17 @@ export default function VideoDetailPage({
   };
   const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(null);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+  };
+
+  useEffect(() => {
+    if (toast?.type !== "success") return;
+    const t = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [toast?.type, toast?.message]);
 
   const fetchVideo = async (opts: { silent?: boolean } = {}) => {
     if (!opts.silent) {
@@ -145,6 +156,7 @@ export default function VideoDetailPage({
       setVideo({
         title: data.title,
         status: data.status,
+        transcribeProgress: data.transcribeProgress ?? null,
         errorDisplay: data.errorDisplay ?? null,
       });
       setClips(Array.isArray(data.clips) ? data.clips : []);
@@ -160,15 +172,24 @@ export default function VideoDetailPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const hasRenderingClips = clips.some(
+    (c) => c.status === "PENDING" || c.status === "PROCESSING",
+  );
+  const shouldPoll =
+    video &&
+    video.status !== "ERROR" &&
+    (video.status === "UPLOADED" ||
+      video.status === "TRANSCRIBING" ||
+      (video.status === "READY" && hasRenderingClips));
+
   useEffect(() => {
-    // Stop polling when done (READY) or failed (ERROR)
-    if (!video || video.status === "READY" || video.status === "ERROR") return;
+    if (!shouldPoll) return;
     const interval = setInterval(() => {
       fetchVideo({ silent: true });
     }, 4000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [video?.status, id]);
+  }, [shouldPoll, id]);
 
   useEffect(() => {
     setTranscriptData(null);
@@ -221,6 +242,7 @@ export default function VideoDetailPage({
         : { error: (await res.text()) || "Server error" };
       if (!res.ok) throw new Error(data.error || "Failed");
       setClips(Array.isArray(data.clips) ? data.clips : []);
+      showToast("success", "Clips regenerated. New clips appear below — video files will be ready in a few minutes.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -235,7 +257,7 @@ export default function VideoDetailPage({
         const data = await res.json();
         setClips(Array.isArray(data.clips) ? data.clips : []);
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   };
 
   const handleRenderClip = async (clipId: string) => {
@@ -243,9 +265,10 @@ export default function VideoDetailPage({
       const res = await fetch(`/api/clips/${clipId}/render`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      alert("Clip rendering started. Check back in a few minutes.");
+      showToast("success", "Rendering started. This clip will be ready in a few minutes.");
+      await refreshClips();
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message);
     }
   };
 
@@ -256,10 +279,10 @@ export default function VideoDetailPage({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      alert(`${data.count} clips queued for rendering.`);
+      showToast("success", `${data.count} clip${data.count === 1 ? "" : "s"} queued. They will be ready in a few minutes.`);
       await refreshClips();
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message);
     }
   };
 
@@ -280,7 +303,7 @@ export default function VideoDetailPage({
       }
       window.location.href = "/videos";
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message);
     } finally {
       setDeleting(false);
     }
@@ -303,6 +326,41 @@ export default function VideoDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-10">
+      {toast && (
+        <div
+          role="alert"
+          className={`fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-xl px-5 py-3.5 shadow-lg ${
+            toast.type === "success"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {toast.type === "success" ? (
+              <svg className="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            <p className="text-sm font-medium">{toast.message}</p>
+            {toast.type === "error" && (
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="-mr-1 ml-2 rounded-lg p-1 text-red-600 hover:bg-red-100 transition-colors"
+                aria-label="Dismiss"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {video?.status === "ERROR" && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4">
           <h3 className="font-semibold text-red-800">
@@ -318,9 +376,30 @@ export default function VideoDetailPage({
           </p>
         </div>
       )}
-      {isProcessing && (
+      {video?.status === "READY" && hasRenderingClips && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-800">
-          <strong>Processing in the background.</strong> You can leave this page — we’ll transcribe and generate clips automatically. Status updates every few seconds.
+          <strong>Creating video files…</strong> Clips will appear here when ready. Updates every few seconds.
+        </div>
+      )}
+      {isProcessing && (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-4 text-sm text-indigo-800">
+          <p className="font-medium">
+            We&apos;re processing your video. Clips will appear here in a few minutes.
+          </p>
+          <p className="mt-1 text-indigo-700/90">
+            You can leave this page — we&apos;ll transcribe and create clips automatically. Status updates every few seconds.
+          </p>
+          {video?.transcribeProgress != null && video.transcribeProgress >= 0 && video.transcribeProgress < 100 && (
+            <div className="mt-3">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-indigo-200">
+                <div
+                  className="h-full bg-indigo-600 transition-all duration-500"
+                  style={{ width: `${video.transcribeProgress}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-indigo-700/80">{video.transcribeProgress}% complete</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -341,19 +420,17 @@ export default function VideoDetailPage({
             title={video?.status !== "READY" ? "Finish transcription first" : undefined}
             className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
           >
-            {loading
-              ? "Generating…"
-              : clips.length > 0
-                ? "Regenerate clips"
-                : "Generate clips"}
+            {loading ? "Generating…" : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
           </button>
-          <button
-            onClick={handleRenderAll}
-            disabled={clips.length === 0}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Render all clips
-          </button>
+          {clips.some((c) => c.status === "PENDING") && (
+            <button
+              onClick={handleRenderAll}
+              title="Create downloadable video files for clips that aren't ready yet"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Create video files
+            </button>
+          )}
           <button
             type="button"
             onClick={handleDeleteVideo}
@@ -436,8 +513,17 @@ export default function VideoDetailPage({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex aspect-[9/16] w-full items-center justify-center bg-slate-100">
-                    <ClipIcon className="h-10 w-10 text-slate-400" />
+                  <div className="flex aspect-[9/16] w-full flex-col items-center justify-center gap-3 bg-slate-100">
+                    {c.status === "PROCESSING" ? (
+                      <>
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                        <span className="text-sm font-medium text-slate-600">
+                          Rendering…
+                        </span>
+                      </>
+                    ) : (
+                      <ClipIcon className="h-10 w-10 text-slate-400" />
+                    )}
                   </div>
                 )}
 
@@ -481,8 +567,8 @@ export default function VideoDetailPage({
             <p className="mt-4 font-medium text-slate-900">No clips yet</p>
             <p className="mt-1 text-sm text-slate-600">
               {video?.status === "READY"
-                ? "Click “Generate clips” to find the best moments."
-                : "Wait for transcription to finish, then click “Generate clips”."}
+                ? "Click Generate clips to find the best moments, or they may appear automatically shortly."
+                : "Clips will appear here automatically in a few minutes."}
             </p>
           </div>
         )}
@@ -590,7 +676,7 @@ export default function VideoDetailPage({
             </h2>
             <p className="mt-2 text-sm text-slate-600">
               This will permanently remove{" "}
-              <span className="font-medium">"{videoTitle}"</span>, its original file,
+              <span className="font-medium">&quot;{videoTitle}&quot;</span>, its original file,
               and all generated clips. This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">

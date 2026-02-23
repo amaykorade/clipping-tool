@@ -4,10 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { createCustomer, createSubscription, getPlanId } from "@/lib/razorpay";
 import { z } from "zod";
 
-const BodySchema = z.object({
-  plan: z.enum(["STARTER", "PRO"]),
-  billing: z.enum(["monthly", "yearly"]).default("monthly"),
-});
+const BodySchema = z.object({ plan: z.enum(["STARTER", "PRO"]) });
 
 /**
  * POST /api/subscription/create
@@ -32,8 +29,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { plan, billing } = parsed.data;
-    const planId = getPlanId(plan, billing);
+    const { plan } = parsed.data;
+    const planId = getPlanId(plan);
 
     // Treat the literal string "NULL" (from a previous bad DB write) as missing
     let customerId =

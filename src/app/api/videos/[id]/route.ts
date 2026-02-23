@@ -33,10 +33,9 @@ export async function GET(
         orderBy: { startTime: "asc" },
       },
       jobs: {
-        where: { status: "FAILED" },
         orderBy: { updatedAt: "desc" },
-        take: 1,
-        select: { error: true },
+        take: 20,
+        select: { type: true, status: true, error: true, progress: true },
       },
     },
   });
@@ -47,13 +46,20 @@ export async function GET(
   if (video.userId && video.userId !== session?.user?.id) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
-  const rawError = video.status === "ERROR" ? video.jobs[0]?.error ?? null : null;
+  const failedJob = video.jobs.find((j) => j.status === "FAILED");
+  const rawError = video.status === "ERROR" ? failedJob?.error ?? null : null;
   const errorDisplay = rawError ? toUserFriendlyError(rawError) : null;
+
+  const activeTranscribeJob = video.jobs.find(
+    (j) => j.type === "TRANSCRIBE" && (j.status === "QUEUED" || j.status === "RUNNING"),
+  );
+  const transcribeProgress = activeTranscribeJob?.progress ?? null;
 
   return NextResponse.json({
     id: video.id,
     title: video.title,
     status: video.status,
+    transcribeProgress,
     duration: video.duration,
     originalUrl: video.originalUrl,
     thumbnailUrl: video.thumbnailUrl,
