@@ -217,10 +217,19 @@ export default function PricingClient({
                     >
                       Sign in to get started
                     </Link>
-                  ) : p.id === currentPlan && (currentBilling == null || billing === currentBilling) ? (
+                  ) : p.id === currentPlan && currentBilling != null && billing === currentBilling ? (
                     <div className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 py-3 text-sm font-semibold text-indigo-600">
                       Current plan
                     </div>
+                  ) : p.id === currentPlan && (currentBilling == null || billing !== currentBilling) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleUpgrade(p.id, billing)}
+                      disabled={loading !== null}
+                      className="w-full rounded-xl border-2 border-indigo-500 bg-indigo-50 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:opacity-70"
+                    >
+                      {loading === `${p.id}-${billing}` ? "Opening payment…" : currentBilling == null ? `Select ${billing === "yearly" ? "yearly" : "monthly"}` : `Switch to ${billing === "yearly" ? "yearly" : "monthly"}`}
+                    </button>
                   ) : p.id === "FREE" ? (
                     <Link
                       href="/account?downgrade=free"
@@ -228,15 +237,6 @@ export default function PricingClient({
                     >
                       Switch to Free
                     </Link>
-                  ) : p.id === currentPlan && billing !== (currentBilling ?? billing) ? (
-                    <button
-                      type="button"
-                      onClick={() => handleUpgrade(p.id, billing)}
-                      disabled={loading !== null}
-                      className="w-full rounded-xl border-2 border-indigo-500 bg-indigo-50 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:opacity-70"
-                    >
-                      {loading === `${p.id}-${billing}` ? "Opening payment…" : `Switch to ${billing === "yearly" ? "yearly" : "monthly"}`}
-                    </button>
                   ) : PLAN_RANK[p.id] > PLAN_RANK[currentPlan] ? (
                     <button
                       type="button"
