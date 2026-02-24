@@ -69,7 +69,7 @@ const ERROR_PATTERNS: Array<{
   },
   // Redis / queue
   {
-    test: (m) => /redis|ECONNRESET|ECONNREFUSED|connection.*refused/i.test(m),
+    test: (m) => /redis|ECONNRESET|ECONNREFUSED|connection.*refused|max requests limit exceeded|max_requests_limit|upstash/i.test(m),
     result: {
       title: "Service temporarily unavailable",
       message: "Our processing queue isn’t responding.",
@@ -106,6 +106,23 @@ const ERROR_PATTERNS: Array<{
 ];
 
 /**
+ * Returns a short message safe to return in API responses (e.g. upload, queue).
+ * Never exposes internal errors (Redis, Upstash, etc.) to the client.
+ */
+export function getSafeApiErrorMessage(err: Error | null | undefined): string {
+  const msg = (err?.message ?? "").trim();
+  if (!msg) return "Something went wrong. Please try again.";
+  if (/redis|ECONNRESET|ECONNREFUSED|connection.*refused|max requests limit exceeded|max_requests_limit|upstash/i.test(msg)) {
+    return "Our processing queue isn't responding. Please try again in a few minutes.";
+  }
+  if (/prisma|database|connection.*timeout|pg_/i.test(msg)) {
+    return "We couldn't save that. Please try again in a few minutes.";
+  }
+  if (err?.message === "Unauthorized") return "Please sign in.";
+  return "Something went wrong. Please try again.";
+}
+
+/**
  * Returns a user-friendly error for display. Falls back to a generic message
  * if the error doesn't match any known pattern.
  */
@@ -124,11 +141,10 @@ export function toUserFriendlyError(rawError: string | null | undefined): UserFr
     if (matches) return result;
   }
 
-  // Unknown error — still show a clear message, optionally with a sanitized hint
-  const sanitized = msg.length > 120 ? msg.slice(0, 120) + "…" : msg;
+  // Unknown error — still show a clear message without leaking internal details
   return {
     title: "Processing failed",
     message: "We ran into an issue while transcribing your video.",
-    action: `Try uploading again. If it keeps failing, contact support and mention: "${sanitized}"`,
+    action: "Try uploading again. If it keeps failing, contact support.",
   };
 }

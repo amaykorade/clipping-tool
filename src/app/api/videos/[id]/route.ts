@@ -73,7 +73,6 @@ export async function GET(
       status: c.status,
       outputUrl: c.outputUrl,
     })),
-    errorMessage: rawError,
     errorDisplay,
   });
 }

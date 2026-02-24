@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { JobType, JobStatus } from "@/generated/prisma";
 import { getSession, canAccessVideo } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
+import { JobType, JobStatus } from "@/generated/prisma";
 
 export async function POST(
   _req: NextRequest,
@@ -65,7 +66,7 @@ export async function POST(
   } catch (error) {
     console.error("[API] Render all clips error:", error);
     return NextResponse.json(
-      { error: (error as Error).message },
+      { error: getSafeApiErrorMessage(error as Error) },
       { status: 500 },
     );
   }

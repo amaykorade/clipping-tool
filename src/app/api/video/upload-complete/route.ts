@@ -1,6 +1,7 @@
 import { JobStatus, JobType } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -82,13 +83,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const err = error as Error;
-    if (err.message === "Unauthorized") {
-      return NextResponse.json({ error: "Please sign in" }, { status: 401 });
-    }
     console.error("[API] Upload complete error:", error);
     return NextResponse.json(
-      { error: err.message || "Failed to complete upload" },
-      { status: 500 },
+      { error: getSafeApiErrorMessage(err) },
+      { status: err?.message === "Unauthorized" ? 401 : 500 },
     );
   }
 }

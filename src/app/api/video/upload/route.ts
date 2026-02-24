@@ -1,7 +1,8 @@
 import { JobStatus, JobType } from "@/generated/prisma";
-import { prisma } from "@/lib/db";
-import { savePendingUpload } from "@/lib/video/upload";
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
+import { savePendingUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -104,13 +105,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const err = error as Error;
-    if (err.message === "Unauthorized") {
-      return NextResponse.json({ error: "Please sign in to upload" }, { status: 401 });
-    }
     console.error("[API] Upload error:", error);
     return NextResponse.json(
-      { error: err.message || "Upload failed" },
-      { status: 500 },
+      { error: getSafeApiErrorMessage(err) },
+      { status: err?.message === "Unauthorized" ? 401 : 500 },
     );
   }
 }
