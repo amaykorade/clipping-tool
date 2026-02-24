@@ -5,7 +5,7 @@ import {
   waitForTranscription,
 } from "@/lib/ai/transcription";
 import { prisma } from "@/lib/db";
-import { VIDEO_QUEUE_NAME, videoQueue, VideoJobData } from "@/lib/queue";
+import { VIDEO_QUEUE_NAME, VideoJobData } from "@/lib/queue";
 import { getStorage } from "@/lib/storage";
 import { finalizePendingUpload } from "@/lib/video/upload";
 import { renderAndUploadClip } from "@/lib/video/clipRenderer";
@@ -120,30 +120,11 @@ async function handleVideoJob(job: Job<VideoJobData>) {
     await job.updateProgress(100);
     console.log(`[Worker] Transcription completed for video ${videoId}`);
 
-    // Auto-generate short-form clips (9:16 for Insta Reels, TikTok, YT Shorts)
+    // Generate clip suggestions (9:16 for Insta Reels, TikTok, YT Shorts).
+    // Rendering is on-demand: user clicks "Create video files" or "Render clip" to queue jobs.
     try {
       const clips = await generateClipsFromTranscript(videoId, { maxClips: 10 });
-      console.log(`[Worker] Generated ${clips.length} clips for video ${videoId}`);
-
-      // Queue render job for each clip so they become ready-to-download shorts
-      for (const clip of clips) {
-        const dbRenderJob = await prisma.job.create({
-          data: {
-            type: JobType.GENERATE_CLIP,
-            status: JobStatus.QUEUED,
-            videoId,
-            progress: 0,
-          },
-        });
-        await videoQueue.add(
-          "generate-clip",
-          { type: JobType.GENERATE_CLIP, clipId: clip.id },
-          { jobId: dbRenderJob.id },
-        );
-      }
-      if (clips.length > 0) {
-        console.log(`[Worker] Queued ${clips.length} clip render jobs for video ${videoId}`);
-      }
+      console.log(`[Worker] Generated ${clips.length} clips for video ${videoId} (render on demand)`);
     } catch (clipErr) {
       console.error(`[Worker] Clip generation failed for video ${videoId}:`, clipErr);
       // Don't fail the transcription job; clips can be generated manually later

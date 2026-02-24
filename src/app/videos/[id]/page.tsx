@@ -378,7 +378,15 @@ export default function VideoDetailPage({
       )}
       {video?.status === "READY" && hasRenderingClips && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-800">
-          <strong>Creating video files…</strong> Clips will appear here when ready. Updates every few seconds.
+          {clips.some((c) => c.status === "PROCESSING") ? (
+            <>
+              <strong>Creating video files…</strong> Clips will appear here when ready. Updates every few seconds.
+            </>
+          ) : (
+            <>
+              <strong>Clips ready.</strong> Click &quot;Create video files&quot; or &quot;Render clip&quot; on each to generate downloadable videos.
+            </>
+          )}
         </div>
       )}
       {isProcessing && (
