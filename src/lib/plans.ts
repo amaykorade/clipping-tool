@@ -15,6 +15,7 @@ export const PLAN_LIMITS: Record<
   {
     maxVideos: number; // per billing cycle; resets on renewal
     maxDurationSec: number;
+    maxUploadSizeMB: number;
     maxClipDownloadsPerMonth: number | null;
     watermark: boolean;
     jobPriority: number;
@@ -26,6 +27,7 @@ export const PLAN_LIMITS: Record<
   FREE: {
     maxVideos: 1,
     maxDurationSec: 20 * 60,
+    maxUploadSizeMB: 500,
     maxClipDownloadsPerMonth: null,
     watermark: true,
     jobPriority: 3,
@@ -36,6 +38,7 @@ export const PLAN_LIMITS: Record<
   STARTER: {
     maxVideos: 10,
     maxDurationSec: 60 * 60,
+    maxUploadSizeMB: 1500,
     maxClipDownloadsPerMonth: null,
     watermark: false,
     jobPriority: 2,
@@ -46,6 +49,7 @@ export const PLAN_LIMITS: Record<
   PRO: {
     maxVideos: 25,
     maxDurationSec: 3 * 60 * 60,
+    maxUploadSizeMB: 3000,
     maxClipDownloadsPerMonth: null,
     watermark: false,
     jobPriority: 1,
@@ -57,6 +61,26 @@ export const PLAN_LIMITS: Record<
 
 export function getPlanLimits(plan: Plan) {
   return PLAN_LIMITS[plan];
+}
+
+/** Max upload size in bytes for the given plan. */
+export function getMaxUploadSizeBytes(plan: Plan): number {
+  return PLAN_LIMITS[plan].maxUploadSizeMB * 1024 * 1024;
+}
+
+/** Format bytes for display (e.g. "1.5 GB", "500 MB"). */
+export function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+  return `${Math.round(bytes / (1024 * 1024))} MB`;
+}
+
+/** Next plan with higher upload limit, or null if already max (PRO). */
+export function getNextPlanWithHigherUpload(plan: Plan): Plan | null {
+  if (plan === "PRO") return null;
+  if (plan === "FREE") return "STARTER";
+  return "PRO";
 }
 
 /** Effective video limit for the billing cycle. Yearly = monthly_limit * 12. */

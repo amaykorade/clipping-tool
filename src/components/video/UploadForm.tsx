@@ -16,12 +16,18 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [uploadStrategy, setUploadStrategy] = useState<UploadStrategy>("direct");
+  const [maxFileSize, setMaxFileSize] = useState<number>(500 * 1024 * 1024);
+  const [maxFileSizeLabel, setMaxFileSizeLabel] = useState<string>("500 MB");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/video/upload")
       .then((r) => r.json())
-      .then((d) => setUploadStrategy(d.uploadStrategy || "direct"))
+      .then((d) => {
+        setUploadStrategy(d.uploadStrategy || "direct");
+        setMaxFileSize(d.maxFileSize ?? 500 * 1024 * 1024);
+        setMaxFileSizeLabel(d.maxFileSizeLabel ?? "500 MB");
+      })
       .catch(() => {});
   }, []);
 
@@ -30,6 +36,11 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
 
     if (!file || !title) {
       setError("Please provide both title and file");
+      return;
+    }
+
+    if (file.size > maxFileSize) {
+      setError(`File is too large. Your plan allows up to ${maxFileSizeLabel} per video. Upgrade to increase the limit.`);
       return;
     }
 
@@ -166,7 +177,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
               Video file
             </label>
             <p className="mt-0.5 text-sm text-slate-500">
-              MP4, MOV, AVI or MKV · max 500MB
+              MP4, MOV, AVI or MKV · up to {maxFileSizeLabel}
             </p>
             <input
               ref={fileInputRef}
@@ -225,7 +236,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
                     {dragActive ? "Drop your video here" : "Click to upload or drag and drop"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    MP4, MOV, AVI, MKV · up to 500MB
+                    MP4, MOV, AVI, MKV · up to {maxFileSizeLabel}
                   </p>
                 </>
               )}

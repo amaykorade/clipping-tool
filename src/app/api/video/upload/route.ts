@@ -1,7 +1,8 @@
 import { JobStatus, JobType } from "@/generated/prisma";
-import { requireAuth } from "@/lib/auth";
+import { getSession, requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSafeApiErrorMessage } from "@/lib/errorMessages";
+import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits } from "@/lib/plans";
 import { savePendingUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -32,11 +33,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check file size (500MB limit)
-    const MAX_FILE_SIZE = 500 * 1024 * 1024;
-    if (file.size > MAX_FILE_SIZE) {
+    // Check file size against plan limit
+    const userWithPlan = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { plan: true },
+    });
+    const plan = (userWithPlan?.plan ?? "FREE") as "FREE" | "STARTER" | "PRO";
+    const maxBytes = getMaxUploadSizeBytes(plan);
+    if (file.size > maxBytes) {
+      const nextPlan = getNextPlanWithHigherUpload(plan);
+      const hint = nextPlan
+        ? ` Upgrade to ${getPlanLimits(nextPlan).label} for ${formatFileSize(getMaxUploadSizeBytes(nextPlan))}.`
+        : "";
       return NextResponse.json(
-        { error: "File too large (maximum 500MB)" },
+        {
+          error: `File is ${formatFileSize(file.size)}. Your plan allows up to ${formatFileSize(maxBytes)} per video.${hint}`,
+        },
         { status: 400 },
       );
     }
@@ -67,11 +79,6 @@ export async function POST(request: NextRequest) {
       userId: user.id,
     });
 
-    const userWithPlan = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { plan: true },
-    });
-    const { getPlanLimits } = await import("@/lib/plans");
     const priority = userWithPlan ? getPlanLimits(userWithPlan.plan).jobPriority : 1;
 
     // Create Job row with same id as BullMQ job id later
@@ -115,9 +122,23 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const storageType = process.env.STORAGE_TYPE || "local";
+  let maxFileSize = getMaxUploadSizeBytes("FREE");
+  try {
+    const session = await getSession();
+    if (session?.user?.id) {
+      const rows = await prisma.$queryRaw<{ plan: string }[]>`
+        SELECT plan FROM "User" WHERE id = ${session.user.id}
+      `;
+      const plan = (rows?.[0]?.plan ?? "FREE") as "FREE" | "STARTER" | "PRO";
+      maxFileSize = getMaxUploadSizeBytes(plan);
+    }
+  } catch {
+    // Fallback to FREE limit
+  }
   return NextResponse.json({
     uploadStrategy: storageType === "s3" ? "presigned" : "direct",
-    maxFileSize: 500 * 1024 * 1024, // 500MB
+    maxFileSize,
+    maxFileSizeLabel: formatFileSize(maxFileSize),
     allowedTypes: [
       "video/mp4",
       "video/quicktime",

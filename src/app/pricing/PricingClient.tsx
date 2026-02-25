@@ -14,6 +14,7 @@ type PlanRow = {
   description: string;
   maxVideos: number;
   maxDurationMin: number;
+  maxUploadLabel: string;
   watermark: boolean;
   speed: string;
   popular?: boolean;
@@ -204,6 +205,7 @@ export default function PricingClient({
                 <ul className="mt-6 space-y-2 text-sm text-slate-700">
                   <li>{maxVideos} video{maxVideos !== 1 ? "s" : ""} max{billing === "yearly" && p.id !== "FREE" ? " per year" : ""}</li>
                   <li>Up to {p.maxDurationMin} min per video</li>
+                  <li>Up to {p.maxUploadLabel} per video</li>
                   <li>Unlimited clip downloads</li>
                   <li>{p.watermark ? "Watermark on clips" : "No watermark"}</li>
                   <li>Processing: {p.speed}</li>

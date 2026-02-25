@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { formatFileSize, PLAN_LIMITS } from "@/lib/plans";
 import { prisma } from "@/lib/db";
 import PricingClient from "./PricingClient";
 
@@ -44,6 +44,7 @@ export default async function PricingPage() {
       description: "Try it out",
       maxVideos: PLAN_LIMITS.FREE.maxVideos,
       maxDurationMin: Math.floor(PLAN_LIMITS.FREE.maxDurationSec / 60),
+      maxUploadLabel: formatFileSize(PLAN_LIMITS.FREE.maxUploadSizeMB * 1024 * 1024),
       watermark: true,
       speed: "Standard",
       popular: false,
@@ -56,6 +57,7 @@ export default async function PricingPage() {
       description: "For creators",
       maxVideos: PLAN_LIMITS.STARTER.maxVideos,
       maxDurationMin: Math.floor(PLAN_LIMITS.STARTER.maxDurationSec / 60),
+      maxUploadLabel: formatFileSize(PLAN_LIMITS.STARTER.maxUploadSizeMB * 1024 * 1024),
       watermark: false,
       speed: "Fast",
       popular: true,
@@ -68,6 +70,7 @@ export default async function PricingPage() {
       description: "For power users",
       maxVideos: PLAN_LIMITS.PRO.maxVideos,
       maxDurationMin: Math.floor(PLAN_LIMITS.PRO.maxDurationSec / 60),
+      maxUploadLabel: formatFileSize(PLAN_LIMITS.PRO.maxUploadSizeMB * 1024 * 1024),
       watermark: false,
       speed: "Priority",
       popular: false,

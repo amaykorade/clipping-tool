@@ -1,12 +1,15 @@
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits } from "@/lib/plans";
 import { createPendingUploadForDirectUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+const MAX_HARD = 10 * 1024 * 1024 * 1024; // 10 GB hard cap
 const UploadUrlSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
   filename: z.string().min(1, "Filename is required"),
-  fileSize: z.number().int().positive().max(500 * 1024 * 1024),
+  fileSize: z.number().int().positive().max(MAX_HARD),
   contentType: z.string().min(1),
 });
 
@@ -35,6 +38,25 @@ export async function POST(request: NextRequest) {
       );
     }
     const { title, filename, fileSize, contentType } = parsed.data;
+
+    const userWithPlan = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { plan: true },
+    });
+    const plan = (userWithPlan?.plan ?? "FREE") as "FREE" | "STARTER" | "PRO";
+    const maxBytes = getMaxUploadSizeBytes(plan);
+    if (fileSize > maxBytes) {
+      const nextPlan = getNextPlanWithHigherUpload(plan);
+      const hint = nextPlan
+        ? ` Upgrade to ${getPlanLimits(nextPlan).label} for ${formatFileSize(getMaxUploadSizeBytes(nextPlan))}.`
+        : "";
+      return NextResponse.json(
+        {
+          error: `File is ${formatFileSize(fileSize)}. Your plan allows up to ${formatFileSize(maxBytes)} per video.${hint}`,
+        },
+        { status: 400 },
+      );
+    }
 
     if (!ALLOWED_TYPES.includes(contentType)) {
       return NextResponse.json(
