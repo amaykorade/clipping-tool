@@ -536,7 +536,7 @@ export default async function Home({
 
       {/* ─── Footer ───────────────────────────────────────────────── */}
       <footer className="mt-24 sm:mt-32">
-        <div className="relative -mx-4 bg-slate-900 px-6 py-16 sm:-mx-6 sm:px-8 sm:py-20">
+        <div className="relative left-1/2 w-[100vw] -translate-x-1/2 bg-slate-900 px-6 py-16 sm:px-8 sm:py-20">
           <div className="mx-auto max-w-5xl">
             <div className="grid gap-10 border-b border-slate-700/60 pb-12 sm:grid-cols-4 sm:pb-14">
               <div className="sm:col-span-2">
