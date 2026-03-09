@@ -7,9 +7,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "worker": "npx tsx src/worker/transcriptionWorker.ts",
-    "worker:transcribe": "WORKER_TYPE=transcribe npx tsx src/worker/transcriptionWorker.ts",
-    "worker:render": "WORKER_TYPE=render npx tsx src/worker/transcriptionWorker.ts",
+    "worker": "node --env-file=.env --import tsx/esm src/worker/transcriptionWorker.ts",
+    "worker:transcribe": "WORKER_TYPE=transcribe node --env-file=.env --import tsx/esm src/worker/transcriptionWorker.ts",
+    "worker:render": "WORKER_TYPE=render node --env-file=.env --import tsx/esm src/worker/transcriptionWorker.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
