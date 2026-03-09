@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { ClipSuggestion } from "@/types";
+import { withCircuitBreaker } from "@/lib/circuitBreaker";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -8,6 +9,11 @@ interface ScoreOptions {
   language?: string;
   /** Step 4: min hook/payoff score (1-10); clips below this are dropped. Set to 0 to disable. */
   minHookPayoffScore?: number;
+  /** User feedback from previous clips to guide selection. */
+  feedback?: {
+    liked: { title: string; text: string }[];
+    disliked: { title: string; text: string }[];
+  };
 }
 
 const DEFAULT_MIN_HOOK_PAYOFF = 6;
@@ -26,14 +32,17 @@ export async function scoreAndTitleSegments(
 
   if (!segments.length) return [];
 
-  const prompt = buildPrompt(segments, maxClips);
+  const prompt = buildPrompt(segments, maxClips, opts.feedback);
 
   // Use Chat Completions API for reliable text response (choices[0].message.content)
-  const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.4,
-  });
+  const res = await withCircuitBreaker(
+    { name: "openai" },
+    () => client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+    }),
+  );
 
   const content = res.choices[0]?.message?.content;
   if (!content || typeof content !== "string") {
@@ -234,6 +243,7 @@ Return ONLY the JSON array.`;
 function buildPrompt(
   segments: { start: number; end: number; text: string }[],
   maxClips: number,
+  feedback?: { liked: { title: string; text: string }[]; disliked: { title: string; text: string }[] },
 ): string {
   const items = segments.map((s, idx) => ({
     id: idx,
@@ -284,7 +294,12 @@ Return a JSON array of up to ${maxClips} objects with:
 Here is the candidate data (JSON):
 
 ${JSON.stringify(items, null, 2)}
-
+${feedback && (feedback.liked.length > 0 || feedback.disliked.length > 0) ? `
+USER FEEDBACK FROM PREVIOUS CLIPS:
+The user has rated clips from this video before. Use this feedback to calibrate your selection.
+${feedback.liked.length > 0 ? `\nClips the user LIKED (find MORE like these):\n${feedback.liked.map((c) => `- "${c.title}": ${c.text.slice(0, 100)}`).join("\n")}` : ""}
+${feedback.disliked.length > 0 ? `\nClips the user DISLIKED (AVOID similar content/style):\n${feedback.disliked.map((c) => `- "${c.title}": ${c.text.slice(0, 100)}`).join("\n")}` : ""}
+` : ""}
 Return ONLY the JSON array, nothing else.
 `;
 }

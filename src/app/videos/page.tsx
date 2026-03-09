@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useToast } from "@/components/ui/Toast";
+import { VideosGridSkeleton } from "@/components/ui/Skeleton";
 
 interface VideoItem {
   id: string;
@@ -13,6 +16,15 @@ interface VideoItem {
   _count: { clips: number };
 }
 
+interface SearchResult {
+  videoId: string;
+  title: string;
+  thumbnailUrl: string | null;
+  duration: number;
+  matches: { text: string; timestamp: number }[];
+  matchCount: number;
+}
+
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`;
   const m = Math.floor(seconds / 60);
@@ -20,38 +32,35 @@ function formatDuration(seconds: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
-function formatStatus(status: string): string {
-  const map: Record<string, string> = {
-    UPLOADED: "Uploaded",
-    TRANSCRIBING: "Transcribing",
-    READY: "Ready",
-    ERROR: "Error",
-  };
-  return map[status] ?? status;
-}
-
-function StatusPill({ status }: { status: string }) {
-  const style: Record<string, string> = {
-    UPLOADED: "bg-amber-100 text-amber-800",
-    TRANSCRIBING: "bg-blue-100 text-blue-800",
-    READY: "bg-emerald-100 text-emerald-800",
-    ERROR: "bg-red-100 text-red-800",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style[status] ?? "bg-slate-100 text-slate-700"}`}
-    >
-      {formatStatus(status)}
-    </span>
-  );
-}
-
 export default function MyVideosPage() {
+  const { showToast } = useToast();
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VideoItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  const handleSearch = async () => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/videos/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      setSearchResults(data.results);
+    } catch {
+      showToast("error", "Search failed");
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const openDeleteModal = (video: VideoItem) => {
     setDeleteTarget(video);
@@ -72,7 +81,7 @@ export default function MyVideosPage() {
       setVideos((prev) => prev.filter((v) => v.id !== id));
       setDeleteTarget(null);
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message || "Failed to delete video.");
     } finally {
       setDeletingId(null);
     }
@@ -94,14 +103,7 @@ export default function MyVideosPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-          <p className="mt-4 text-sm text-slate-500">Loading your videos…</p>
-        </div>
-      </div>
-    );
+    return <VideosGridSkeleton />;
   }
 
   if (error === "signin") {
@@ -188,6 +190,65 @@ export default function MyVideosPage() {
         </Link>
       </header>
 
+      {/* Transcript search */}
+      <div className="mb-6">
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (e.target.value.trim().length < 2) setSearchResults(null);
+            }}
+            placeholder="Search across all transcripts…"
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          />
+          <button
+            type="submit"
+            disabled={searching || searchQuery.trim().length < 2}
+            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+          >
+            {searching ? "Searching…" : "Search"}
+          </button>
+        </form>
+
+        {searchResults && (
+          <div className="mt-4 space-y-3">
+            {searchResults.length === 0 ? (
+              <p className="text-sm text-slate-500">No matches found for &ldquo;{searchQuery}&rdquo;</p>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500">{searchResults.length} video{searchResults.length !== 1 ? "s" : ""} matched</p>
+                {searchResults.map((r) => (
+                  <div key={r.videoId} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <Link href={`/videos/${r.videoId}`} className="font-medium text-indigo-600 hover:underline">
+                      {r.title}
+                    </Link>
+                    <span className="ml-2 text-xs text-slate-400">{r.matchCount} match{r.matchCount !== 1 ? "es" : ""}</span>
+                    <ul className="mt-2 space-y-1">
+                      {r.matches.slice(0, 3).map((m, i) => (
+                        <li key={i} className="text-sm text-slate-600">
+                          <span className="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-500">
+                            {formatDuration(m.timestamp)}
+                          </span>
+                          {m.text.length > 120 ? m.text.slice(0, 120) + "…" : m.text}
+                        </li>
+                      ))}
+                      {r.matches.length > 3 && (
+                        <li className="text-xs text-slate-400">+{r.matches.length - 3} more</li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((v) => (
           <li key={v.id}>
@@ -211,7 +272,7 @@ export default function MyVideosPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-slate-900 line-clamp-2">{v.title}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <StatusPill status={v.status} />
+                    <StatusBadge status={v.status} />
                     <span className="text-xs text-slate-500">
                       {formatDuration(v.duration)}
                     </span>

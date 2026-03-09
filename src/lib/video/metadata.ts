@@ -87,6 +87,42 @@ export async function generateThumbnail(
 //  Validate video file
 //  Checks if file is a valid video and meets requirements
 
+/**
+ * Compress video to H.264 CRF 23 / AAC 128k, capped at 5 Mbps.
+ * Skips compression if the source bitrate is already ≤ TARGET_BITRATE.
+ * Returns the path to the compressed file (or the original if skipped).
+ */
+const TARGET_BITRATE = 5_000_000; // 5 Mbps
+
+export async function compressVideo(
+  inputPath: string,
+  outputPath: string,
+): Promise<{ compressed: boolean; outputPath: string }> {
+  const meta = await extractMetadata(inputPath);
+
+  // Skip if already small enough (within 10% of target)
+  if (meta.bitrate > 0 && meta.bitrate <= TARGET_BITRATE * 1.1) {
+    return { compressed: false, outputPath: inputPath };
+  }
+
+  return new Promise((resolve, reject) => {
+    Ffmpeg(inputPath)
+      .videoCodec("libx264")
+      .outputOptions([
+        "-crf", "23",
+        "-maxrate", "5M",
+        "-bufsize", "10M",
+        "-preset", "fast",
+        "-movflags", "+faststart",
+      ])
+      .audioCodec("aac")
+      .audioBitrate("128k")
+      .on("end", () => resolve({ compressed: true, outputPath }))
+      .on("error", (err) => reject(new Error(`Compression failed: ${err.message}`)))
+      .save(outputPath);
+  });
+}
+
 export async function validateVideo(
   filePath: string,
 ): Promise<{ valid: boolean; error?: string; metadata?: VideoMetadata }> {

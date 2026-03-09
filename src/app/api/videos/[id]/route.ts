@@ -35,7 +35,7 @@ export async function GET(
       jobs: {
         orderBy: { updatedAt: "desc" },
         take: 20,
-        select: { type: true, status: true, error: true, progress: true },
+        select: { type: true, status: true, error: true, progress: true, clipId: true },
       },
     },
   });
@@ -64,15 +64,24 @@ export async function GET(
     originalUrl: video.originalUrl,
     thumbnailUrl: video.thumbnailUrl,
     transcribedAt: video.transcribedAt,
-    clips: video.clips.map((c) => ({
-      id: c.id,
-      title: c.title,
-      startTime: c.startTime,
-      endTime: c.endTime,
-      confidence: c.confidence,
-      status: c.status,
-      outputUrl: c.outputUrl,
-    })),
+    clips: video.clips.map((c) => {
+      const renderJob = video.jobs.find(
+        (j) => j.clipId === c.id && j.type === "GENERATE_CLIP" && (j.status === "QUEUED" || j.status === "RUNNING"),
+      );
+      return {
+        id: c.id,
+        title: c.title,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        confidence: c.confidence,
+        status: c.status,
+        outputUrl: c.outputUrl,
+        thumbnailUrl: c.thumbnailUrl,
+        renderProgress: renderJob?.progress ?? null,
+        speaker: c.speaker,
+        feedback: c.feedback,
+      };
+    }),
     errorDisplay,
   });
 }

@@ -28,11 +28,31 @@ export async function POST(request: NextRequest) {
     notes?: Record<string, string>;
     current_end?: number;
   };
-  let payload: { event: string; payload?: { subscription?: { entity?: SubEntity }; payment?: { entity?: { notes?: Record<string, string> } } } };
+  let payload: { event: string; account_id?: string; payload?: { subscription?: { entity?: SubEntity }; payment?: { entity?: { id?: string; notes?: Record<string, string> } } } };
   try {
     payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Build a unique event ID from payment ID or subscription ID
+  const paymentId = payload.payload?.payment?.entity?.id;
+  const subId = payload.payload?.subscription?.entity?.id;
+  const eventId = paymentId ?? subId;
+
+  if (!eventId) {
+    console.warn("[Webhook] No payment or subscription ID in webhook, skipping");
+    return NextResponse.json({ ok: true });
+  }
+
+  // Idempotency: skip if we already processed this exact event
+  // We check for duplicates first but only record AFTER successful processing
+  const existing = await prisma.webhookEvent.findUnique({
+    where: { provider_eventId: { provider: "razorpay", eventId } },
+  });
+  if (existing) {
+    console.log(`[Webhook] Duplicate event skipped: ${eventId} (${payload.event})`);
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   const event = payload.event;
@@ -112,12 +132,12 @@ export async function POST(request: NextRequest) {
     if (!user || user.razorpaySubscriptionId !== completedSubId) {
       return NextResponse.json({ ok: true });
     }
-    if (user.nextRazorpaySubscriptionId) {
+    if (user.nextRazorpaySubscriptionId && (user.nextPlan === "STARTER" || user.nextPlan === "PRO")) {
       // Switch to pending subscription; reset upload quota for new cycle
       await prisma.user.update({
         where: { id: completedUserId },
         data: {
-          plan: user.nextPlan as "STARTER" | "PRO",
+          plan: user.nextPlan,
           billingInterval: user.nextBillingInterval,
           razorpaySubscriptionId: user.nextRazorpaySubscriptionId,
           subscriptionCurrentPeriodEnd: user.nextSubscriptionPeriodEnd,
@@ -167,6 +187,18 @@ export async function POST(request: NextRequest) {
         subscriptionCancelledAtPeriodEnd: false,
       },
     });
+  }
+
+  // Record successful processing (idempotency: future retries will be skipped)
+  try {
+    await prisma.webhookEvent.create({
+      data: { provider: "razorpay", eventId, eventType: event },
+    });
+  } catch (err: unknown) {
+    // P2002 = race condition: another request processed it concurrently — that's fine
+    if (!(err && typeof err === "object" && "code" in err && err.code === "P2002")) {
+      console.error("[Webhook] Failed to record idempotency:", err);
+    }
   }
 
   return NextResponse.json({ ok: true });

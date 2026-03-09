@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 type PlanId = "FREE" | "STARTER" | "PRO";
 type BillingPeriod = "monthly" | "yearly";
@@ -52,7 +53,8 @@ export default function PricingClient({
   currentBilling?: "monthly" | "yearly" | null;
 }) {
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
-  const [loading, setLoading] = useState<string | null>(null); // "STARTER" | "PRO" for upgrade; "STARTER-monthly" etc for switch
+  const [loading, setLoading] = useState<string | null>(null);
+  const { showToast } = useToast(); // "STARTER" | "PRO" for upgrade; "STARTER-monthly" etc for switch
 
   async function handleUpgrade(plan: PlanId, targetBilling?: BillingPeriod) {
     if (plan === "FREE") return;
@@ -91,13 +93,13 @@ export default function PricingClient({
       });
 
       rzp.on("payment.failed", function () {
-        alert("Payment failed. Please try again.");
+        showToast("error", "Payment failed. Please try again.");
         setLoading(null);
       });
 
       rzp.open();
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message || "Something went wrong.");
       setLoading(null);
     }
   }

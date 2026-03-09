@@ -2,7 +2,8 @@ import { JobStatus, JobType } from "@/generated/prisma";
 import { getSession, requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSafeApiErrorMessage } from "@/lib/errorMessages";
-import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits } from "@/lib/plans";
+import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits, MAX_ACTIVE_JOBS_PER_USER } from "@/lib/plans";
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 import { savePendingUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,6 +17,9 @@ const UploadSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+
+    const rl = checkRateLimit(`upload:${user.id}`, RATE_LIMITS.upload);
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -59,11 +63,13 @@ export async function POST(request: NextRequest) {
       "video/quicktime", // .mov
       "video/x-msvideo", // .avi
       "video/x-matroska", // .mkv
+      "video/webm", // .webm
+      "video/x-m4v", // .m4v
     ];
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type (must be MP4, MOV, AVI, or MKV)" },
+        { error: "Invalid file type. Supported: MP4, MOV, AVI, MKV, WebM, M4V." },
         { status: 400 },
       );
     }
@@ -80,6 +86,20 @@ export async function POST(request: NextRequest) {
     });
 
     const priority = userWithPlan ? getPlanLimits(userWithPlan.plan).jobPriority : 1;
+
+    // Check concurrent job limit
+    const activeJobs = await prisma.job.count({
+      where: {
+        video: { userId: user.id },
+        status: { in: [JobStatus.QUEUED, JobStatus.RUNNING] },
+      },
+    });
+    if (activeJobs >= MAX_ACTIVE_JOBS_PER_USER) {
+      return NextResponse.json(
+        { error: `You have ${activeJobs} jobs in progress. Please wait for some to finish before uploading more.` },
+        { status: 429 },
+      );
+    }
 
     // Create Job row with same id as BullMQ job id later
     const dbJob = await prisma.job.create({
@@ -144,7 +164,9 @@ export async function GET() {
       "video/quicktime",
       "video/x-msvideo",
       "video/x-matroska",
+      "video/webm",
+      "video/x-m4v",
     ],
-    allowedExtensions: [".mp4", ".mov", ".avi", ".mkv"],
+    allowedExtensions: [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"],
   });
 }

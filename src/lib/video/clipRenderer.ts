@@ -4,15 +4,21 @@ import { prisma } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
 import { getPlanLimits } from "@/lib/plans";
 import { renderClip, getVideoInfo } from "./processing";
+import { generateThumbnail } from "./metadata";
 import { ClipStatus, AspectRatio } from "@/generated/prisma";
+import { getPreset, type ExportPreset } from "@/lib/video/presets";
 import fs from "fs/promises";
 
 const MIN_CLIP_DURATION_SEC = 1;
 
-export async function renderAndUploadClip(clipId: string): Promise<string> {
+export async function renderAndUploadClip(
+  clipId: string,
+  onProgress?: (percent: number) => void,
+  presetId?: string,
+): Promise<string> {
   const clip = await prisma.clip.findUnique({
     where: { id: clipId },
-    include: { video: { include: { user: { select: { plan: true } } } } },
+    include: { video: { include: { user: { select: { plan: true, watermarkKey: true, watermarkPosition: true, watermarkOpacity: true } } } } },
   });
 
   if (!clip) throw new Error("Clip not found");
@@ -31,8 +37,7 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
 
     // Download original video to temp location
     const inputPath = path.join("/tmp", `${video.id}-original.mp4`);
-    const videoBuffer = await storage.download(video.storageKey);
-    await fs.writeFile(inputPath, videoBuffer);
+    await storage.downloadToFile(video.storageKey, inputPath);
 
     // Clamp clip times to actual file duration to avoid ffmpeg "Conversion failed" (exit 234)
     const fileInfo = await getVideoInfo(inputPath);
@@ -55,17 +60,20 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
       endTime,
     );
 
-    const plan = clip.video.user?.plan ?? "FREE";
+    const userRecord = clip.video.user;
+    const plan = userRecord?.plan ?? "FREE";
     const addWatermark = getPlanLimits(plan).watermark;
+    const preset = presetId ? getPreset(presetId) : undefined;
 
-    // Render clip
+    // Render clip (preset overrides aspect ratio if provided)
+    const aspectRatio = preset?.aspectRatio ?? aspectRatioToString(clip.aspectRatio);
     await renderClip({
       inputPath,
       outputPath,
       startTime,
       endTime,
       crop: {
-        aspectRatio: aspectRatioToString(clip.aspectRatio),
+        aspectRatio,
         position: "center",
       },
       captions:
@@ -76,6 +84,9 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
             }
           : undefined,
       watermark: addWatermark,
+      watermarkPosition: (userRecord?.watermarkPosition as "bottom-right" | "bottom-left" | "top-right" | "top-left") ?? undefined,
+      watermarkOpacity: userRecord?.watermarkOpacity ?? undefined,
+      onProgress,
     });
 
     // Upload rendered clip under the video's namespace so each video's shorts are stored together
@@ -86,11 +97,26 @@ export async function renderAndUploadClip(clipId: string): Promise<string> {
       contentType: "video/mp4",
     });
 
-    // Update clip with output URL
+    // Generate thumbnail from rendered clip (best frame = 1 second in)
+    let thumbnailUrl: string | undefined;
+    const thumbPath = `/tmp/${clip.id}-thumb.jpg`;
+    try {
+      await generateThumbnail(outputPath, thumbPath, 1);
+      const thumbBuffer = await fs.readFile(thumbPath);
+      const thumbKey = `videos/${video.id}/clips/${clip.id}/thumb.jpg`;
+      const thumbResult = await storage.upload(thumbBuffer, thumbKey, { contentType: "image/jpeg" });
+      thumbnailUrl = thumbResult.url;
+      await fs.unlink(thumbPath).catch(() => {});
+    } catch (e) {
+      console.warn("[ClipRenderer] Thumbnail generation failed:", e);
+    }
+
+    // Update clip with output URL and thumbnail
     await prisma.clip.update({
       where: { id: clipId },
       data: {
         outputUrl: uploadResult.url,
+        thumbnailUrl,
         status: ClipStatus.COMPLETED,
       },
     });

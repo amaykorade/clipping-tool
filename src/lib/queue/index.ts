@@ -2,50 +2,83 @@ import { JobType } from "@/generated/prisma";
 import { JobsOptions, Queue } from "bullmq";
 import IORedis from "ioredis";
 
-export const VIDEO_QUEUE_NAME = "video-processing";
+/** Transcription jobs (API-bound, slow) */
+export const TRANSCRIBE_QUEUE_NAME = "video-transcription";
+/** Clip rendering jobs (CPU-bound, parallelizable) */
+export const RENDER_QUEUE_NAME = "clip-rendering";
+
+/** @deprecated Use TRANSCRIBE_QUEUE_NAME or RENDER_QUEUE_NAME */
+export const VIDEO_QUEUE_NAME = TRANSCRIBE_QUEUE_NAME;
 
 export interface VideoJobData {
   type: JobType;
   videoId?: string;
   clipId?: string;
+  /** Platform export preset ID (e.g. "tiktok", "instagram-reels") */
+  presetId?: string;
 }
 
-// Lazy init: only create connection and queue when first used.
+// Lazy init: only create connection and queues when first used.
 // Prevents ECONNREFUSED during Next.js build (Redis not needed for static generation).
-let _videoQueue: Queue<VideoJobData> | null = null;
+let _connection: IORedis | null = null;
+let _transcribeQueue: Queue<VideoJobData> | null = null;
+let _renderQueue: Queue<VideoJobData> | null = null;
 
-function getVideoQueue(): Queue<VideoJobData> {
-  if (!_videoQueue) {
+function getConnection(): IORedis {
+  if (!_connection) {
     const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
-    const connection = new IORedis(redisUrl, {
+    _connection = new IORedis(redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
       retryStrategy(times) {
-        const delay = Math.min(times * 500, 5000);
-        return delay;
+        if (times > 50) return null; // give up after ~125s of retries
+        return Math.min(times * 500, 5000);
       },
       enableOfflineQueue: true,
       ...(redisUrl.startsWith("rediss://") && {
         tls: { rejectUnauthorized: true },
       }),
     });
-    _videoQueue = new Queue<VideoJobData>(VIDEO_QUEUE_NAME, {
-      connection,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 10_000,
-        },
-        removeOnComplete: true,
-        removeOnFail: false,
-      } as JobsOptions,
-    });
   }
-  return _videoQueue;
+  return _connection;
 }
 
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 3,
+  backoff: {
+    type: "exponential",
+    delay: 10_000,
+  },
+  removeOnComplete: { count: 200 },
+  removeOnFail: { count: 500, age: 7 * 24 * 3600 },
+};
+
+function getTranscribeQueue(): Queue<VideoJobData> {
+  if (!_transcribeQueue) {
+    _transcribeQueue = new Queue<VideoJobData>(TRANSCRIBE_QUEUE_NAME, {
+      connection: getConnection(),
+      defaultJobOptions: DEFAULT_JOB_OPTIONS,
+    });
+  }
+  return _transcribeQueue;
+}
+
+function getRenderQueue(): Queue<VideoJobData> {
+  if (!_renderQueue) {
+    _renderQueue = new Queue<VideoJobData>(RENDER_QUEUE_NAME, {
+      connection: getConnection(),
+      defaultJobOptions: DEFAULT_JOB_OPTIONS,
+    });
+  }
+  return _renderQueue;
+}
+
+/** Smart proxy: routes jobs to the correct queue based on job type. */
 export const videoQueue = {
-  add: (...args: Parameters<Queue<VideoJobData>["add"]>) =>
-    getVideoQueue().add(...args),
+  add: (name: string, data: VideoJobData, opts?: Parameters<Queue<VideoJobData>["add"]>[2]) => {
+    if (data.type === JobType.GENERATE_CLIP || data.type === JobType.BATCH_EXPORT) {
+      return getRenderQueue().add(name, data, opts);
+    }
+    return getTranscribeQueue().add(name, data, opts);
+  },
 };

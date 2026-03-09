@@ -2,8 +2,31 @@ import { prisma } from "@/lib/db";
 import { scoreAndTitleSegments } from "@/lib/ai/clipScoring";
 import { getBeatsFromTranscript } from "@/lib/ai/semanticSegmentation";
 import { refineClipBoundaries, applyTrailingAndOpeningRules } from "@/lib/ai/clipRefinement";
-import type { Transcript, ClipSuggestion } from "@/types";
+import type { Transcript, ClipSuggestion, TranscriptWord } from "@/types";
 import { ClipStatus, AspectRatio } from "@/generated/prisma";
+
+/** Find the dominant speaker in a time range by total speaking time. */
+function getDominantSpeaker(
+  words: TranscriptWord[],
+  startTime: number,
+  endTime: number,
+): string | null {
+  const durations = new Map<string, number>();
+  for (const w of words) {
+    if (!w.speaker || w.start < startTime || w.end > endTime) continue;
+    durations.set(w.speaker, (durations.get(w.speaker) ?? 0) + (w.end - w.start));
+  }
+  if (durations.size === 0) return null;
+  let best = "";
+  let bestDur = 0;
+  for (const [speaker, dur] of durations) {
+    if (dur > bestDur) {
+      best = speaker;
+      bestDur = dur;
+    }
+  }
+  return best;
+}
 
 /** Round to 1s for dedup key so the same segment doesn't become multiple clips with different titles. */
 function timeRangeKey(startTime: number, endTime: number): string {
@@ -66,12 +89,25 @@ export async function generateClipsFromTranscript(
   if (video.status !== "READY")
     throw new Error("Video must be transcribed first (status READY)");
 
-  // Always regenerate clips from the latest transcript.
-  // If clips already exist for this video, delete them so we don't keep
-  // outdated or low-quality ones around.
+  // Collect feedback from existing clips before deleting
+  const feedbackData = { liked: [] as { title: string; text: string }[], disliked: [] as { title: string; text: string }[] };
   if (video.clips.length > 0) {
+    for (const c of video.clips) {
+      if (c.feedback === "like" || c.feedback === "dislike") {
+        // Get the text for this clip from the transcript
+        const rawTranscript = video.transcript as Transcript | null | undefined;
+        const clipText = rawTranscript?.sentences
+          ?.filter((s) => s.start >= c.startTime && s.end <= c.endTime)
+          .map((s) => s.text)
+          .join(" ") ?? "";
+        const entry = { title: c.title, text: clipText };
+        if (c.feedback === "like") feedbackData.liked.push(entry);
+        else feedbackData.disliked.push(entry);
+      }
+    }
     console.log(
       "[generateClipsFromTranscript] Video already has clips, deleting and regenerating",
+      `(feedback: ${feedbackData.liked.length} liked, ${feedbackData.disliked.length} disliked)`,
     );
     await prisma.clip.deleteMany({ where: { videoId } });
   }
@@ -186,7 +222,11 @@ export async function generateClipsFromTranscript(
     "| Candidate segments:",
     segments.length,
   );
-  let suggestions = await scoreAndTitleSegments(segments, { maxClips });
+  const hasFeedback = feedbackData.liked.length > 0 || feedbackData.disliked.length > 0;
+  let suggestions = await scoreAndTitleSegments(segments, {
+    maxClips,
+    ...(hasFeedback && { feedback: feedbackData }),
+  });
   console.log("[generateClipsFromTranscript] Suggestions count:", suggestions.length);
 
   if (suggestions.length === 0 && segments.length > 0) {
@@ -224,6 +264,7 @@ export async function generateClipsFromTranscript(
           duration: s.endTime - s.startTime,
           confidence: s.confidence,
           keywords: s.keywords ?? [],
+          speaker: getDominantSpeaker(transcript.words, s.startTime, s.endTime),
           aspectRatio: AspectRatio.VERTICAL, // 9:16 for Reels, TikTok, YT Shorts
           status: ClipStatus.PENDING,
         },

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/auth/SessionProvider";
 import Navbar from "@/components/layout/Navbar";
+import { ToastProvider } from "@/components/ui/Toast";
 import { getBaseUrl } from "@/lib/seo";
 
 const geistSans = Geist({
@@ -78,15 +79,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen bg-slate-50 text-slate-900`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100`}
       >
         <SessionProvider>
-          <Navbar />
-          <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-            {children}
-          </main>
+          <ToastProvider>
+            <Navbar />
+            <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+              {children}
+            </main>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

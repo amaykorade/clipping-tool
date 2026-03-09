@@ -19,6 +19,8 @@ export interface IStorage {
 
   delete(key: string): Promise<void>;
   download(key: string): Promise<Buffer>;
+  /** Stream file directly to disk — avoids loading entire file into memory. */
+  downloadToFile(key: string, destPath: string): Promise<void>;
   exists(key: string): Promise<boolean>;
   getUrl(key: string): string;
 }
@@ -106,6 +108,11 @@ export class LocalStorage implements IStorage {
     }
   }
 
+  async downloadToFile(key: string, destPath: string): Promise<void> {
+    const fullPath = path.join(this.basePath, key);
+    await fs.copyFile(fullPath, destPath);
+  }
+
   getUrl(key: string): string {
     // Public URL served by our Next.js route at app/upload/[...path]/route.ts
     return `${this.baseUrl}/upload/${key}`;
@@ -189,6 +196,17 @@ export class S3Storage implements IStorage {
     const res = await client.send(cmd);
     if (!res.Body) throw new Error(`File not found: ${key}`);
     return Buffer.from(await res.Body.transformToByteArray());
+  }
+
+  async downloadToFile(key: string, destPath: string): Promise<void> {
+    const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({ region: this.region });
+    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const res = await client.send(cmd);
+    if (!res.Body) throw new Error(`File not found: ${key}`);
+    const nodeStream = res.Body as unknown as Readable;
+    const writeStream = createWriteStream(destPath);
+    await pipeline(nodeStream, writeStream);
   }
 
   getUrl(key: string): string {

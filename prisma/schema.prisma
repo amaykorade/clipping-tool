@@ -50,6 +50,14 @@ model User {
 
   // Plan limit: total videos ever uploaded (lifetime; deleting does not free slots)
   totalVideosUploaded        Int      @default(0)
+
+  // Custom branding (PRO tier)
+  /** Storage key for user's custom watermark/logo image */
+  watermarkKey              String?
+  /** Watermark position: "bottom-right", "bottom-left", "top-right", "top-left" */
+  watermarkPosition         String?   @default("bottom-right")
+  /** Watermark opacity 0.0-1.0 */
+  watermarkOpacity          Float?    @default(0.6)
 }
 
 model Account {
@@ -111,6 +119,8 @@ model Video {
 
   // Transcription data
   transcript    Json?
+  /** Plain-text transcript for full-text search across videos */
+  transcriptText String?
   transcribedAt DateTime?
 
   // Relationships
@@ -120,6 +130,7 @@ model Video {
   @@index([status])
   @@index([createdAt])
   @@index([userId])
+  @@index([userId, createdAt])
 }
 
 model Clip {
@@ -140,17 +151,23 @@ model Clip {
   // AI - generated metadata
   confidence    Float?
   keywords      String[]
+  /** Dominant speaker label from multi-speaker detection (e.g. "A", "B") */
+  speaker       String?
+  /** User feedback: "like", "dislike", or null */
+  feedback      String?
 
   // Output Configuration
   aspectRatio  AspectRatio @default(VERTICAL)
   captionStyle String?
 
   // Storage
-  outputUrl   String?
-  status      ClipStatus   @default(PENDING)
+  outputUrl     String?
+  thumbnailUrl  String?
+  status        ClipStatus   @default(PENDING)
 
   @@index([videoId])
   @@index([status])
+  @@index([videoId, status])
 }
 
 model Job {
@@ -166,11 +183,16 @@ model Job {
   // Related entities
   videoId     String
   video       Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  clipId      String?
 
   // Error handling
   error       String?
   retryCount  Int         @default(0)
   maxRetries  Int         @default(3)
+
+  // Cost tracking (in USD cents)
+  /** Estimated cost of external API calls for this job */
+  externalCostCents Int?
 
   // Timings
   startedAt   DateTime?
@@ -178,8 +200,21 @@ model Job {
 
   @@index([status])
   @@index([type])
+  @@index([videoId, status])
 }
 
+
+// Webhook idempotency: prevent duplicate processing of the same event
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   // e.g. "razorpay"
+  eventId     String   // external event ID (e.g. Razorpay event_id)
+  eventType   String   // e.g. "subscription.activated"
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([processedAt])
+}
 
 // Enums
 

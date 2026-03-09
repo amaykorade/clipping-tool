@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { generateThumbnail, validateVideo } from "./metadata";
+import { generateThumbnail, validateVideo, compressVideo } from "./metadata";
 import path from "path";
 import { getStorage, isS3Storage } from "../storage";
 import fs from "fs/promises";
@@ -25,6 +25,15 @@ export interface UploadResult {
 
 const PENDING_PREFIX = "pending/";
 
+const ALLOWED_EXTENSIONS = new Set([".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]);
+
+function validateFileName(fileName: string): void {
+  const ext = path.extname(fileName).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw new Error(`Unsupported file type "${ext}". Allowed: ${[...ALLOWED_EXTENSIONS].join(", ")}`);
+  }
+}
+
 /**
  * Fast path: save file to pending storage and create a minimal Video record.
  * Worker will run finalizePendingUpload then transcribe. Use this in the API
@@ -34,8 +43,9 @@ export async function savePendingUpload(
   options: SavePendingOptions,
 ): Promise<UploadResult> {
   const { title, originalFileName, fileBuffer, userId } = options;
+  validateFileName(originalFileName);
   const videoId = uuidv4();
-  const ext = path.extname(originalFileName);
+  const ext = path.extname(originalFileName).toLowerCase();
   const pendingKey = `${PENDING_PREFIX}${videoId}${ext}`;
 
   // Plan check: totalVideosUploaded (lifetime; duration check happens in worker)
@@ -102,6 +112,7 @@ export async function createPendingUploadForDirectUpload(
   options: CreatePendingForDirectUploadOptions,
 ): Promise<{ videoId: string; uploadUrl: string; storageKey: string }> {
   const { title, originalFileName, fileSize, contentType, userId } = options;
+  validateFileName(originalFileName);
   const storage = getStorage();
   if (!isS3Storage(storage)) {
     throw new Error("Direct upload requires STORAGE_TYPE=s3");
@@ -120,7 +131,7 @@ export async function createPendingUploadForDirectUpload(
   }
 
   const videoId = uuidv4();
-  const ext = path.extname(originalFileName);
+  const ext = path.extname(originalFileName).toLowerCase();
   const pendingKey = `${PENDING_PREFIX}${videoId}${ext}`;
 
   const uploadUrl = await storage.getPresignedPutUrl(pendingKey, contentType);
@@ -160,9 +171,9 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
 
   const storage = getStorage();
   const tempFilePath = `/tmp/${videoId}${path.extname(video.fileName)}`;
+  const compressedPath = `/tmp/${videoId}-compressed.mp4`;
   try {
-    const buffer = await storage.download(video.storageKey);
-    await fs.writeFile(tempFilePath, buffer);
+    await storage.downloadToFile(video.storageKey, tempFilePath);
 
     const validation = await validateVideo(tempFilePath);
     if (!validation.valid) {
@@ -190,8 +201,8 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
       }
     }
 
-    const ext = path.extname(video.fileName);
-    const finalStorageKey = `videos/${videoId}/${ext}`;
+    const ext = path.extname(video.fileName).toLowerCase() || ".mp4";
+    const finalStorageKey = `videos/${videoId}/video${ext}`;
     const thumbnailKey = `thumbnails/${videoId}.jpg`;
     const tempThumbPath = `/tmp/${videoId}-thumb.jpg`;
 
@@ -201,10 +212,24 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
       console.warn("[Worker] Thumbnail generation failed:", e);
     }
 
-    const videoBuffer = await fs.readFile(tempFilePath);
+    // Compress video if bitrate is above threshold (H.264 CRF 23, 5 Mbps cap)
+    let finalFilePath = tempFilePath;
+    try {
+      const result = await compressVideo(tempFilePath, compressedPath);
+      if (result.compressed) {
+        finalFilePath = compressedPath;
+        console.log(`[Worker] Video compressed: ${videoId}`);
+      }
+    } catch (e) {
+      console.warn("[Worker] Compression failed, using original:", e);
+      // Fall back to uncompressed original
+    }
+
+    const videoBuffer = await fs.readFile(finalFilePath);
+    const finalFileSize = videoBuffer.length;
     await storage.upload(videoBuffer, finalStorageKey, {
       contentType: "video/mp4",
-      fileSize: metadata.fileSize,
+      fileSize: finalFileSize,
     });
 
     let thumbnailUrl: string | undefined;
@@ -224,7 +249,7 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
       data: {
         storageKey: finalStorageKey,
         duration: metadata.duration,
-        fileSize: metadata.fileSize,
+        fileSize: finalFileSize,
         thumbnailUrl,
       },
     });
@@ -233,6 +258,11 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
   } finally {
     try {
       await fs.unlink(tempFilePath);
+    } catch {
+      // ignore
+    }
+    try {
+      await fs.unlink(compressedPath);
     } catch {
       // ignore
     }

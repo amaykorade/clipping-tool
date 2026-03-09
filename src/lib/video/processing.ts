@@ -12,8 +12,14 @@ export interface RenderClipOptions {
   endTime: number;
   crop?: CropOptions;
   captions?: CaptionOptions;
-  /** When true, overlay a "Kllivo" watermark (e.g. for free plan). */
+  /** When true, overlay a watermark. */
   watermark?: boolean;
+  /** Watermark position. Defaults to bottom-right. */
+  watermarkPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+  /** Watermark opacity 0.0-1.0. Defaults to 0.6. */
+  watermarkOpacity?: number;
+  /** Called with progress percentage (0-100) during FFmpeg rendering. */
+  onProgress?: (percent: number) => void;
 }
 
 export interface CaptionOptions {
@@ -30,7 +36,7 @@ export interface CaptionOptions {
  * Combines: trimming, cropping, caption overlay
  */
 export async function renderClip(options: RenderClipOptions): Promise<void> {
-  const { inputPath, outputPath, startTime, endTime, crop, captions, watermark } = options;
+  const { inputPath, outputPath, startTime, endTime, crop, captions, watermark, watermarkPosition, watermarkOpacity, onProgress } = options;
 
   const durationSec = endTime - startTime;
   if (durationSec < 0.5) {
@@ -57,9 +63,9 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
       if (captionFilter) filters.push(captionFilter);
     }
 
-    // 3. Watermark (free plan)
+    // 3. Watermark
     if (watermark) {
-      filters.push(buildWatermarkFilter());
+      filters.push(buildWatermarkFilter(watermarkPosition, watermarkOpacity));
     }
 
     if (filters.length > 0) {
@@ -83,7 +89,9 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
         console.log("[FFmpeg] Command:", cmd);
       })
       .on("progress", (progress) => {
-        console.log(`[FFmpeg] Progress: ${progress.percent?.toFixed(1)}%`);
+        const pct = progress.percent ?? 0;
+        console.log(`[FFmpeg] Progress: ${pct.toFixed(1)}%`);
+        if (onProgress) onProgress(Math.round(pct));
       })
       .on("end", () => {
         console.log("[FFmpeg] Clip rendering complete");
@@ -98,12 +106,19 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
 }
 
 /**
- * Build watermark drawtext filter (bottom-right, semi-transparent).
+ * Build watermark drawtext filter with configurable position and opacity.
  */
-function buildWatermarkFilter(): string {
+function buildWatermarkFilter(
+  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left",
+  opacity?: number,
+): string {
   const text = "Kllivo";
   const escaped = text.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
-  return `drawtext=text='${escaped}':x=w-tw-24:y=h-th-16:fontsize=22:fontcolor=white@0.6:bordercolor=black@0.4:borderw=1`;
+  const alpha = opacity ?? 0.6;
+  const pos = position ?? "bottom-right";
+  const x = pos.includes("right") ? "w-tw-24" : "24";
+  const y = pos.includes("bottom") ? "h-th-16" : "16";
+  return `drawtext=text='${escaped}':x=${x}:y=${y}:fontsize=22:fontcolor=white@${alpha}:bordercolor=black@${alpha * 0.67}:borderw=1`;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Transcript, TranscriptWord } from "assemblyai";
 import axios from "axios";
+import { withCircuitBreaker } from "@/lib/circuitBreaker";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs/promises";
 import path from "path";
@@ -123,9 +124,12 @@ export async function getTranscriptionResult(id: string): Promise<{
   words?: TranscriptWord[];
   error?: string;
 }> {
-  const res = await axios.get(`${ASSEMBLY_API_URL}/transcript/${id}`, {
-    headers: { authorization: API_KEY },
-  });
+  const res = await withCircuitBreaker(
+    { name: "assemblyai" },
+    () => axios.get(`${ASSEMBLY_API_URL}/transcript/${id}`, {
+      headers: { authorization: API_KEY },
+    }),
+  );
 
   const data = res.data;
 

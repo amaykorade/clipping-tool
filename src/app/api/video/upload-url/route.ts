@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits } from "@/lib/plans";
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 import { createPendingUploadForDirectUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -18,6 +19,8 @@ const ALLOWED_TYPES = [
   "video/quicktime",
   "video/x-msvideo",
   "video/x-matroska",
+  "video/webm",
+  "video/x-m4v",
 ];
 
 /**
@@ -29,6 +32,10 @@ const ALLOWED_TYPES = [
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+
+    const rl = checkRateLimit(`upload:${user.id}`, RATE_LIMITS.upload);
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
+
     const body = await request.json();
     const parsed = UploadUrlSchema.safeParse(body);
     if (!parsed.success) {
@@ -60,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (!ALLOWED_TYPES.includes(contentType)) {
       return NextResponse.json(
-        { error: "Invalid file type (must be MP4, MOV, AVI, or MKV)" },
+        { error: "Invalid file type. Supported: MP4, MOV, AVI, MKV, WebM, M4V." },
         { status: 400 },
       );
     }

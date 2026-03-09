@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import type { Plan } from "@/lib/plans";
+import { useToast } from "@/components/ui/Toast";
 
 export default function AccountClient({
   plan,
@@ -13,6 +14,7 @@ export default function AccountClient({
   periodEnd: Date | null;
   cancelledAtPeriodEnd?: boolean;
 }) {
+  const { showToast } = useToast();
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -41,7 +43,7 @@ export default function AccountClient({
       setCancelSuccess(true);
       window.location.reload();
     } catch (e) {
-      alert((e as Error).message);
+      showToast("error", (e as Error).message || "Failed to cancel subscription.");
     } finally {
       setCancelling(false);
     }
@@ -66,7 +68,7 @@ export default function AccountClient({
   return (
     <div className="flex flex-col gap-4">
       {paymentSuccess && (
-        <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+        <div role="alert" aria-live="polite" className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
           Payment successful! Your plan has been upgraded. It may take a minute to reflect.
         </div>
       )}

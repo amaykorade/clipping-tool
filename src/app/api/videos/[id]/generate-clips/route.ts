@@ -2,6 +2,7 @@ import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTransc
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 
 export async function POST(
   _request: NextRequest,
@@ -17,6 +18,12 @@ export async function POST(
     if (!video || !canAccessVideo(video, session)) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
+
+    if (session?.user?.id) {
+      const rl = checkRateLimit(`generateClips:${session.user.id}`, RATE_LIMITS.generateClips);
+      if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
+    }
+
     const clips = await generateClipsFromTranscript(videoId, { maxClips: 10 });
     return NextResponse.json({
       clips: clips.map((c) => ({

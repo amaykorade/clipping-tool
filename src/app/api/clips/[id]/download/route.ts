@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
 import { getStorage } from "@/lib/storage";
 import { canDownloadClip } from "@/lib/plans";
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 
 function extractStorageKeyFromUrl(url: string): string | null {
   try {
@@ -49,6 +50,11 @@ export async function GET(
     return NextResponse.json({ error: "Clip not found" }, { status: 404 });
   }
 
+  if (session?.user?.id) {
+    const rl = checkRateLimit(`download:${session.user.id}`, RATE_LIMITS.download);
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
+  }
+
   const user = clip.video.userId && clip.video.user ? clip.video.user : null;
   if (user) {
     const check = canDownloadClip(
@@ -88,14 +94,28 @@ export async function GET(
   if (clip.video.userId && user) {
     const now = new Date();
     const periodStart = user.clipDownloadsPeriodStart;
-    const newPeriod = !periodStart || now.getFullYear() > periodStart.getFullYear() || now.getMonth() > periodStart.getMonth();
-    await prisma.user.update({
-      where: { id: clip.video.userId },
-      data: {
-        clipDownloadsUsedThisMonth: newPeriod ? 1 : user.clipDownloadsUsedThisMonth + 1,
-        clipDownloadsPeriodStart: newPeriod ? new Date(now.getFullYear(), now.getMonth(), 1) : periodStart,
-      },
-    });
+    const sameMonth = periodStart &&
+      now.getFullYear() === periodStart.getFullYear() &&
+      now.getMonth() === periodStart.getMonth();
+    const newPeriod = !sameMonth;
+    if (newPeriod) {
+      // New billing month: reset counter to 1
+      await prisma.user.update({
+        where: { id: clip.video.userId },
+        data: {
+          clipDownloadsUsedThisMonth: 1,
+          clipDownloadsPeriodStart: new Date(now.getFullYear(), now.getMonth(), 1),
+        },
+      });
+    } else {
+      // Same month: atomic increment to avoid race conditions
+      await prisma.user.update({
+        where: { id: clip.video.userId },
+        data: {
+          clipDownloadsUsedThisMonth: { increment: 1 },
+        },
+      });
+    }
   }
 
   const filename = `${sanitizeFilename(clip.title)}.mp4`;

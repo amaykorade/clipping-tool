@@ -37,11 +37,13 @@ export async function requireAuth(): Promise<{ id: string; email?: string | null
   return { id: session.user.id, email: session.user.email ?? null };
 }
 
-/** Check if current session can access this video (owner or legacy unowned). */
+/** Check if current session can access this video (owner or legacy unowned).
+ *  Legacy (unowned) videos still require an authenticated session. */
 export function canAccessVideo(
   video: { userId: string | null },
   session: { user: { id: string } } | null,
 ): boolean {
-  if (!video.userId) return true; // legacy
-  return session?.user?.id === video.userId;
+  if (!session?.user?.id) return false;
+  if (!video.userId) return true; // legacy — any logged-in user
+  return session.user.id === video.userId;
 }

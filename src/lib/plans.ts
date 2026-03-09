@@ -114,14 +114,20 @@ export function canUploadVideo(
   return { ok: true };
 }
 
+/** Max concurrent active jobs (QUEUED + RUNNING) per user. */
+export const MAX_ACTIVE_JOBS_PER_USER = 5;
+
+/** Check if two dates fall in the same calendar month. */
+function isSameMonth(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
 export function canDownloadClip(plan: Plan, usedThisMonth: number, periodStart: Date | null): { ok: boolean; error?: string } {
   const limits = getPlanLimits(plan);
   if (limits.maxClipDownloadsPerMonth === null) return { ok: true };
   // If period not set or we're in a new month, treat as 0 used
   const now = new Date();
-  const periodYear = periodStart?.getFullYear() ?? 0;
-  const periodMonth = periodStart?.getMonth() ?? 0;
-  if (periodStart == null || now.getFullYear() > periodYear || now.getMonth() > periodMonth) {
+  if (!periodStart || !isSameMonth(now, periodStart)) {
     return { ok: true };
   }
   if (usedThisMonth >= limits.maxClipDownloadsPerMonth) {

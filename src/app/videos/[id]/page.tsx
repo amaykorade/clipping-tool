@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { VideoDetailSkeleton } from "@/components/ui/Skeleton";
 
 function toSameOriginUrl(url: string): string {
   try {
@@ -71,39 +73,9 @@ interface Clip {
   confidence: number | null;
   status: string;
   outputUrl?: string | null;
-}
-
-function formatStatus(status: string): string {
-  const map: Record<string, string> = {
-    UPLOADED: "Uploaded",
-    TRANSCRIBING: "Transcribing",
-    READY: "Ready",
-    PENDING: "Pending",
-    PROCESSING: "Rendering",
-    COMPLETED: "Ready",
-    ERROR: "Error",
-  };
-  return map[status] ?? status;
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    UPLOADED: "bg-amber-100 text-amber-800",
-    TRANSCRIBING: "bg-blue-100 text-blue-800",
-    READY: "bg-emerald-100 text-emerald-800",
-    PENDING: "bg-amber-100 text-amber-800",
-    PROCESSING: "bg-blue-100 text-blue-800",
-    COMPLETED: "bg-emerald-100 text-emerald-800",
-    ERROR: "bg-red-100 text-red-800",
-  };
-  const style = styles[status] ?? "bg-slate-100 text-slate-700";
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style}`}
-    >
-      {formatStatus(status)}
-    </span>
-  );
+  renderProgress?: number | null;
+  speaker?: string | null;
+  feedback?: string | null;
 }
 
 export default function VideoDetailPage({
@@ -124,6 +96,7 @@ export default function VideoDetailPage({
   const [error, setError] = useState("");
   const [videoErrors, setVideoErrors] = useState<Record<string, boolean>>({});
   const [showTranscript, setShowTranscript] = useState(false);
+  const [speakerFilter, setSpeakerFilter] = useState<string | null>(null);
   type TranscriptData = {
     transcript: {
       words: { text: string; start: number; end: number }[];
@@ -310,14 +283,7 @@ export default function VideoDetailPage({
   };
 
   if (loadingVideo) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-          <p className="mt-4 text-sm text-slate-500">Loading video…</p>
-        </div>
-      </div>
-    );
+    return <VideoDetailSkeleton />;
   }
 
   const isProcessing =
@@ -329,6 +295,7 @@ export default function VideoDetailPage({
       {toast && (
         <div
           role="alert"
+          aria-live="assertive"
           className={`fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-xl px-5 py-3.5 shadow-lg ${
             toast.type === "success"
               ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -439,6 +406,15 @@ export default function VideoDetailPage({
               Create video files
             </button>
           )}
+          {clips.some((c) => c.status === "COMPLETED") && (
+            <a
+              href={`/api/videos/${id}/download-clips`}
+              download
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Download all (.zip)
+            </a>
+          )}
           <button
             type="button"
             onClick={handleDeleteVideo}
@@ -456,10 +432,43 @@ export default function VideoDetailPage({
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Clips</h2>
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-slate-900">Clips</h2>
+          {(() => {
+            const speakers = [...new Set(clips.map((c) => c.speaker).filter(Boolean))] as string[];
+            if (speakers.length <= 1) return null;
+            return (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setSpeakerFilter(null)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                    speakerFilter === null
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  All
+                </button>
+                {speakers.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSpeakerFilter(s === speakerFilter ? null : s)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                      speakerFilter === s
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Speaker {s}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
         {clips.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {clips.map((c) => (
+            {clips.filter((c) => !speakerFilter || c.speaker === speakerFilter).map((c) => (
               <article
                 key={c.id}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -477,6 +486,11 @@ export default function VideoDetailPage({
                     </span>
                     {c.confidence != null && (
                       <span>{(c.confidence * 100).toFixed(0)}% match</span>
+                    )}
+                    {c.speaker && (
+                      <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700">
+                        Speaker {c.speaker}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -525,9 +539,23 @@ export default function VideoDetailPage({
                     {c.status === "PROCESSING" ? (
                       <>
                         <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                        <span className="text-sm font-medium text-slate-600">
-                          Rendering…
-                        </span>
+                        {c.renderProgress != null && c.renderProgress > 0 ? (
+                          <>
+                            <div className="mx-4 h-1.5 w-3/4 overflow-hidden rounded-full bg-slate-200">
+                              <div
+                                className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                                style={{ width: `${c.renderProgress}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-slate-600">
+                              Rendering… {c.renderProgress}%
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm font-medium text-slate-600">
+                            Rendering…
+                          </span>
+                        )}
                       </>
                     ) : (
                       <ClipIcon className="h-10 w-10 text-slate-400" />
@@ -564,6 +592,44 @@ export default function VideoDetailPage({
                     </button>
                   </div>
                 )}
+
+                {/* Feedback buttons */}
+                <div className="flex items-center justify-end gap-1 border-t border-slate-100 px-4 py-2">
+                  <button
+                    onClick={async () => {
+                      const next = c.feedback === "like" ? null : "like";
+                      await fetch(`/api/clips/${c.id}/feedback`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ feedback: next }),
+                      });
+                      setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                    }}
+                    className={`rounded-lg p-1.5 text-sm transition ${c.feedback === "like" ? "bg-green-100 text-green-700" : "text-slate-400 hover:text-green-600"}`}
+                    title="More like this"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const next = c.feedback === "dislike" ? null : "dislike";
+                      await fetch(`/api/clips/${c.id}/feedback`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ feedback: next }),
+                      });
+                      setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                    }}
+                    className={`rounded-lg p-1.5 text-sm transition ${c.feedback === "dislike" ? "bg-red-100 text-red-700" : "text-slate-400 hover:text-red-600"}`}
+                    title="Less like this"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
+                    </svg>
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -610,6 +676,31 @@ export default function VideoDetailPage({
                 <DownloadIcon className="h-4 w-4" />
                 Download (.json)
               </button>
+              <a
+                href={`/api/videos/${id}/transcript?format=srt`}
+                download
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <DownloadIcon className="h-4 w-4" />
+                .srt
+              </a>
+              <a
+                href={`/api/videos/${id}/transcript?format=vtt`}
+                download
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <DownloadIcon className="h-4 w-4" />
+                .vtt
+              </a>
+              <a
+                href={`/api/videos/${id}/transcript?format=chapters`}
+                download
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                title="YouTube-style chapter timestamps"
+              >
+                <DownloadIcon className="h-4 w-4" />
+                Chapters
+              </a>
             </div>
           )}
         </div>
