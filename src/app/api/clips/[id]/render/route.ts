@@ -17,7 +17,7 @@ export async function POST(
 
   const clip = await prisma.clip.findUnique({
     where: { id },
-    include: { video: { select: { userId: true }, include: { user: { select: { plan: true } } } } },
+    include: { video: { include: { user: { select: { plan: true } } } } },
   });
 
   if (!clip) {
