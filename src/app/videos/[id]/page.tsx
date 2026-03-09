@@ -194,8 +194,9 @@ export default function VideoDetailPage({
   const handleRenderClip = async (clipId: string) => {
     try {
       const res = await fetch(`/api/clips/${clipId}/render`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error || "Render request failed");
       showToast("success", "Rendering started. This clip will be ready in a few minutes.");
       await refreshClips();
     } catch (e) {
@@ -206,8 +207,9 @@ export default function VideoDetailPage({
   const handleRenderAll = async () => {
     try {
       const res = await fetch(`/api/videos/${id}/render-all-clips`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error || "Render request failed");
       showToast("success", `${data.count} clip${data.count === 1 ? "" : "s"} queued for rendering.`);
       await refreshClips();
     } catch (e) {
