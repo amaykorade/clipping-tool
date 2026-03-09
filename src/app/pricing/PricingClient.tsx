@@ -114,7 +114,7 @@ export default function PricingClient({
           className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
             billing === "monthly"
               ? "bg-indigo-600 text-white shadow-md"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           }`}
         >
           Monthly
@@ -125,15 +125,15 @@ export default function PricingClient({
           className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition ${
             billing === "yearly"
               ? "bg-indigo-600 text-white shadow-md"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           }`}
         >
           Yearly
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
               billing === "yearly"
-                ? "bg-white/25 text-white"
-                : "bg-emerald-100 text-emerald-700"
+                ? "bg-indigo-400/30 text-white"
+                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
             }`}
           >
             2 months free
@@ -160,8 +160,8 @@ export default function PricingClient({
               key={p.id}
               className={`relative rounded-2xl border-2 p-6 transition-shadow ${
                 p.popular
-                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg"
-                  : "border-slate-200 bg-white hover:shadow-md"
+                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg dark:bg-indigo-950/20"
+                  : "border-slate-200 bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
               }`}
             >
               {p.popular && (
@@ -170,7 +170,7 @@ export default function PricingClient({
                 </span>
               )}
               <div className="flex flex-col">
-                <h2 className="text-lg font-bold text-slate-900">{p.name}</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{p.name}</h2>
                 <p className="mt-1 text-sm text-slate-500">{p.description}</p>
 
                 {/* Price */}
@@ -178,7 +178,7 @@ export default function PricingClient({
                   {price != null ? (
                     <div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold text-slate-900">${price}</span>
+                        <span className="text-3xl font-bold text-slate-900 dark:text-white">${price}</span>
                         <span className="text-slate-500">
                           /{billing === "yearly" ? "year" : "month"}
                         </span>
@@ -200,11 +200,11 @@ export default function PricingClient({
                       )}
                     </div>
                   ) : (
-                    <span className="text-3xl font-bold text-slate-900">Free</span>
+                    <span className="text-3xl font-bold text-slate-900 dark:text-white">Free</span>
                   )}
                 </div>
 
-                <ul className="mt-6 space-y-2 text-sm text-slate-700">
+                <ul className="mt-6 space-y-2 text-sm text-slate-700 dark:text-slate-300">
                   <li>{maxVideos} video{maxVideos !== 1 ? "s" : ""} max{billing === "yearly" && p.id !== "FREE" ? " per year" : ""}</li>
                   <li>Up to {p.maxDurationMin} min per video</li>
                   <li>Up to {p.maxUploadLabel} per video</li>

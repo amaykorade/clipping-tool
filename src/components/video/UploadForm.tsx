@@ -146,14 +146,14 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <form onSubmit={handleSubmit} className="p-6 sm:p-8">
         <div className="space-y-8">
           {/* Title */}
           <div>
             <label
               htmlFor="upload-title"
-              className="block text-sm font-medium text-slate-900"
+              className="block text-sm font-medium text-slate-900 dark:text-white"
             >
               Video title
             </label>
@@ -166,14 +166,14 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Episode 12 — Product launch"
-              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-500"
+              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-500 dark:disabled:bg-slate-800"
               disabled={uploading}
             />
           </div>
 
           {/* File drop zone */}
           <div>
-            <label className="block text-sm font-medium text-slate-900">
+            <label className="block text-sm font-medium text-slate-900 dark:text-white">
               Video file
             </label>
             <p className="mt-0.5 text-sm text-slate-500">
@@ -210,7 +210,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
                     <UploadIcon className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <p className="font-medium text-slate-900">{file.name}</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{file.name}</p>
                   <p className="text-sm text-slate-500">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
@@ -244,7 +244,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700/50 dark:bg-red-950/40 dark:text-red-300">
               {error}
             </div>
           )}
@@ -269,7 +269,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
           <button
             type="submit"
             disabled={uploading || !file || !title}
-            className="w-full rounded-xl bg-indigo-600 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+            className="w-full rounded-xl bg-indigo-600 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {uploading ? "Uploading…" : "Upload video"}
           </button>

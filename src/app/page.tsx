@@ -179,8 +179,11 @@ export default async function Home({
       />
 
       {showSignInPrompt && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Please sign in with Google to upload videos. Use the button in the top right to sign in, then try again.
+        <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300">
+          <span>Please sign in with Google to upload videos.</span>
+          <Link href="/api/auth/signin" className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500">
+            Sign in
+          </Link>
         </div>
       )}
 
@@ -230,11 +233,11 @@ export default async function Home({
 
       {/* ─── Stats bar ────────────────────────────────────────────── */}
       <section className="mx-auto mt-12 max-w-5xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-slate-100">
+        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:sm:divide-slate-700">
           {stats.map((s) => (
             <div key={s.label} className="flex flex-col items-center gap-1 px-4 text-center">
-              <span className="text-2xl font-bold text-indigo-600 sm:text-3xl">{s.value}</span>
-              <span className="text-xs text-slate-500 sm:text-sm">{s.label}</span>
+              <span className="text-2xl font-bold text-indigo-600 sm:text-3xl dark:text-indigo-400">{s.value}</span>
+              <span className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">{s.label}</span>
             </div>
           ))}
         </div>
@@ -243,13 +246,13 @@ export default async function Home({
       {/* ─── Features ─────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             Everything you need
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl dark:text-white">
             From one video to many clips
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-base text-slate-600 sm:text-lg">
+          <p className="mx-auto mt-3 max-w-xl text-base text-slate-600 sm:text-lg dark:text-slate-400">
             No timeline, no guesswork. Upload once and get platform-ready shorts in minutes.
           </p>
         </div>
@@ -257,13 +260,13 @@ export default async function Home({
           {features.map((item, i) => (
             <li
               key={i}
-              className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:border-indigo-200 hover:shadow-md"
+              className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:border-indigo-200 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-700"
             >
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-100">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400">
                 {item.icon}
               </span>
-              <h3 className="mt-5 text-base font-semibold text-slate-900">{item.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{item.description}</p>
+              <h3 className="mt-5 text-base font-semibold text-slate-900 dark:text-white">{item.title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.description}</p>
             </li>
           ))}
         </ul>
@@ -272,19 +275,19 @@ export default async function Home({
       {/* ─── How it works ─────────────────────────────────────────── */}
       <section id="how-it-works" className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             Process
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             Three steps to ready-to-post clips
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600">
+          <p className="mx-auto mt-3 max-w-xl text-slate-600 dark:text-slate-400">
             No editing skills needed. Upload your video and let Kllivo do the work.
           </p>
         </div>
         <div className="mt-16 grid gap-8 sm:grid-cols-3">
           {steps.map((item, i) => (
-            <div key={item.step} className="relative flex flex-col rounded-2xl border border-slate-200 bg-white p-8">
+            <div key={item.step} className="relative flex flex-col rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-700 dark:bg-slate-800">
               <div className="flex items-center gap-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
                   {i + 1}
@@ -297,8 +300,8 @@ export default async function Home({
                   </span>
                 )}
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">{item.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.body}</p>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">{item.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{item.body}</p>
             </div>
           ))}
         </div>
@@ -307,22 +310,22 @@ export default async function Home({
       {/* ─── Use cases ────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             Who it's for
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             Built for creators who publish long-form content
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600">
+          <p className="mx-auto mt-3 max-w-xl text-slate-600 dark:text-slate-400">
             Whether you're a podcaster, speaker, YouTuber or brand — Kllivo turns your long videos into short-form content automatically.
           </p>
         </div>
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {useCases.map((uc) => (
-            <div key={uc.title} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-indigo-200 hover:shadow-sm transition">
+            <div key={uc.title} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-indigo-200 hover:shadow-sm transition dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-700">
               <span className="text-3xl">{uc.icon}</span>
-              <h3 className="mt-4 text-base font-semibold text-slate-900">{uc.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{uc.description}</p>
+              <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">{uc.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{uc.description}</p>
             </div>
           ))}
         </div>
@@ -384,13 +387,13 @@ export default async function Home({
       {/* ─── Pricing teaser ───────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             Pricing
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             Simple, transparent pricing
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600">
+          <p className="mx-auto mt-3 max-w-xl text-slate-600 dark:text-slate-400">
             Start free. Upgrade when you need more videos and faster processing.
           </p>
         </div>
@@ -431,8 +434,8 @@ export default async function Home({
               key={plan.name}
               className={`relative flex flex-col rounded-2xl border-2 p-6 ${
                 plan.highlight
-                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg"
-                  : "border-slate-200 bg-white"
+                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg dark:bg-indigo-950/20"
+                  : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
               }`}
             >
               {plan.highlight && (
@@ -440,15 +443,15 @@ export default async function Home({
                   Most popular
                 </span>
               )}
-              <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-              <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.name}</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{plan.description}</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-slate-900">{plan.price}</span>
-                <span className="text-slate-500">{plan.period}</span>
+                <span className="text-3xl font-bold text-slate-900 dark:text-white">{plan.price}</span>
+                <span className="text-slate-500 dark:text-slate-400">{plan.period}</span>
               </div>
               <ul className="mt-6 space-y-2">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
@@ -480,19 +483,24 @@ export default async function Home({
       {/* ─── FAQ ──────────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-3xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             FAQ
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             Frequently asked questions
           </h2>
         </div>
-        <dl className="mt-12 divide-y divide-slate-200">
+        <dl className="mt-12 divide-y divide-slate-200 dark:divide-slate-700">
           {faqs.map((faq) => (
-            <div key={faq.q} className="py-6">
-              <dt className="text-base font-semibold text-slate-900">{faq.q}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-slate-600">{faq.a}</dd>
-            </div>
+            <details key={faq.q} className="group py-5">
+              <summary className="flex cursor-pointer items-center justify-between text-base font-semibold text-slate-900 dark:text-white">
+                {faq.q}
+                <svg className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <dd className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{faq.a}</dd>
+            </details>
           ))}
         </dl>
       </section>
@@ -528,7 +536,7 @@ export default async function Home({
 
       {/* ─── Footer ───────────────────────────────────────────────── */}
       <footer className="mt-24 sm:mt-32">
-        <div className="relative w-screen max-w-none bg-slate-900 px-6 py-16 sm:px-8 sm:py-20 ml-[calc((100vw-100%)/-2)]">
+        <div className="relative -mx-4 bg-slate-900 px-6 py-16 sm:-mx-6 sm:px-8 sm:py-20">
           <div className="mx-auto max-w-5xl">
             <div className="grid gap-10 border-b border-slate-700/60 pb-12 sm:grid-cols-4 sm:pb-14">
               <div className="sm:col-span-2">

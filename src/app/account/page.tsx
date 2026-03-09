@@ -66,18 +66,18 @@ export default async function AccountPage({
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
           Account
         </h1>
-        <p className="mt-1 text-slate-600">
+        <p className="mt-1 text-slate-600 dark:text-slate-400">
           Your plan and subscription settings.
         </p>
       </header>
 
       <div className="space-y-6">
         {/* Profile summary */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Profile
           </h2>
           <div className="mt-4 flex items-center gap-4">
@@ -93,15 +93,15 @@ export default async function AccountPage({
               </span>
             )}
             <div>
-              <p className="font-medium text-slate-900">{user.name ?? "—"}</p>
-              <p className="text-sm text-slate-500">{user.email ?? "—"}</p>
+              <p className="font-medium text-slate-900 dark:text-white">{user.name ?? "—"}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{user.email ?? "—"}</p>
             </div>
           </div>
         </section>
 
         {/* Current plan */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Current plan
           </h2>
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -144,8 +144,8 @@ export default async function AccountPage({
         </section>
 
         {/* Manage subscription */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Subscription
           </h2>
           {params?.downgrade === "free" && isPaid && (

@@ -13,10 +13,10 @@ export default function UploadPageClient() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-10">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
           Upload video
         </h1>
-        <p className="mt-2 text-slate-600">
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
           Add a long-form video. We’ll transcribe it, find the best moments, and generate
           ready-to-post clips for Reels, TikTok and Shorts.
         </p>
@@ -24,9 +24,9 @@ export default function UploadPageClient() {
 
       <UploadForm onUploadComplete={handleUploadComplete} />
 
-      <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+      <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400">
         <p>
-          <strong className="font-medium text-slate-700">Processing in the background.</strong>{" "}
+          <strong className="font-medium text-slate-700 dark:text-slate-300">Processing in the background.</strong>{" "}
           After upload you can leave this page. We’ll transcribe and generate clips automatically — check My videos or come back here later.
         </p>
       </div>

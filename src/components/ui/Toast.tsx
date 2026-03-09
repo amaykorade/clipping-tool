@@ -48,14 +48,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={toast.id}
               role="alert"
               aria-live="assertive"
-              className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg text-sm animate-in slide-in-from-right ${
+              className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg text-sm backdrop-blur-sm ${
                 toast.type === "success"
-                  ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border border-red-200 bg-red-50 text-red-800"
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-950/90 dark:text-emerald-200"
+                  : "border border-red-200 bg-red-50 text-red-800 dark:border-red-700/50 dark:bg-red-950/90 dark:text-red-200"
               }`}
+              style={{ animation: "slideIn 0.2s ease-out" }}
             >
-              <span className="mt-0.5 shrink-0 text-base" aria-hidden="true">
-                {toast.type === "success" ? "✓" : "✕"}
+              <span className="mt-0.5 shrink-0" aria-hidden="true">
+                {toast.type === "success" ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                  </svg>
+                )}
               </span>
               <p className="flex-1 font-medium">{toast.message}</p>
               <button

@@ -62,14 +62,6 @@ export default function MyVideosPage() {
     }
   };
 
-  const openDeleteModal = (video: VideoItem) => {
-    setDeleteTarget(video);
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteTarget(null);
-  };
-
   const performDelete = async (id: string) => {
     setDeletingId(id);
     try {
@@ -109,9 +101,9 @@ export default function MyVideosPage() {
   if (error === "signin") {
     return (
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-xl font-semibold text-slate-900">My videos</h1>
-          <p className="mt-2 text-slate-600">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">My videos</h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             Sign in with Google to see your videos and upload new ones.
           </p>
           <Link
@@ -128,11 +120,11 @@ export default function MyVideosPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-red-800">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-red-800 dark:border-red-700/50 dark:bg-red-950/50 dark:text-red-300">
           <p>{error}</p>
           <Link
             href="/"
-            className="mt-3 inline-block text-sm font-medium text-red-700 underline-offset-2 hover:underline"
+            className="mt-3 inline-block text-sm font-medium text-red-700 underline-offset-2 hover:underline dark:text-red-400"
           >
             Back to home
           </Link>
@@ -145,20 +137,20 @@ export default function MyVideosPage() {
     return (
       <div className="mx-auto max-w-2xl">
         <header className="mb-10">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             My videos
           </h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             Your uploaded videos and generated clips in one place.
           </p>
         </header>
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-            <VideoIcon className="h-8 w-8 text-slate-400" />
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
+            <VideoIcon className="h-8 w-8 text-slate-400 dark:text-slate-500" />
           </div>
-          <h2 className="mt-4 text-lg font-semibold text-slate-900">No videos yet</h2>
-          <p className="mt-2 text-slate-600">
-            Upload your first video and we’ll transcribe it and suggest the best clips for Reels, TikTok and Shorts.
+          <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">No videos yet</h2>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
+            Upload your first video and we'll transcribe it and suggest the best clips for Reels, TikTok and Shorts.
           </p>
           <Link
             href="/upload"
@@ -175,10 +167,10 @@ export default function MyVideosPage() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             My videos
           </h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             {videos.length} {videos.length === 1 ? "video" : "videos"} · Click to open and generate clips
           </p>
         </div>
@@ -203,38 +195,38 @@ export default function MyVideosPage() {
               setSearchQuery(e.target.value);
               if (e.target.value.trim().length < 2) setSearchResults(null);
             }}
-            placeholder="Search across all transcripts…"
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            placeholder="Search across all transcripts..."
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-900/30"
           />
           <button
             type="submit"
             disabled={searching || searchQuery.trim().length < 2}
-            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
           >
-            {searching ? "Searching…" : "Search"}
+            {searching ? "Searching..." : "Search"}
           </button>
         </form>
 
         {searchResults && (
           <div className="mt-4 space-y-3">
             {searchResults.length === 0 ? (
-              <p className="text-sm text-slate-500">No matches found for &ldquo;{searchQuery}&rdquo;</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No matches found for &ldquo;{searchQuery}&rdquo;</p>
             ) : (
               <>
-                <p className="text-sm text-slate-500">{searchResults.length} video{searchResults.length !== 1 ? "s" : ""} matched</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{searchResults.length} video{searchResults.length !== 1 ? "s" : ""} matched</p>
                 {searchResults.map((r) => (
-                  <div key={r.videoId} className="rounded-xl border border-slate-200 bg-white p-4">
-                    <Link href={`/videos/${r.videoId}`} className="font-medium text-indigo-600 hover:underline">
+                  <div key={r.videoId} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+                    <Link href={`/videos/${r.videoId}`} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
                       {r.title}
                     </Link>
                     <span className="ml-2 text-xs text-slate-400">{r.matchCount} match{r.matchCount !== 1 ? "es" : ""}</span>
                     <ul className="mt-2 space-y-1">
                       {r.matches.slice(0, 3).map((m, i) => (
-                        <li key={i} className="text-sm text-slate-600">
-                          <span className="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-500">
+                        <li key={i} className="text-sm text-slate-600 dark:text-slate-300">
+                          <span className="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-500 dark:bg-slate-700 dark:text-slate-400">
                             {formatDuration(m.timestamp)}
                           </span>
-                          {m.text.length > 120 ? m.text.slice(0, 120) + "…" : m.text}
+                          {m.text.length > 120 ? m.text.slice(0, 120) + "..." : m.text}
                         </li>
                       ))}
                       {r.matches.length > 3 && (
@@ -252,9 +244,9 @@ export default function MyVideosPage() {
       <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((v) => (
           <li key={v.id}>
-            <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow">
+            <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600">
               <Link href={`/videos/${v.id}`} className="block">
-                <div className="aspect-video w-full overflow-hidden bg-slate-100">
+                <div className="aspect-video w-full overflow-hidden bg-slate-100 dark:bg-slate-700">
                   {v.thumbnailUrl ? (
                     <img
                       src={v.thumbnailUrl}
@@ -262,7 +254,7 @@ export default function MyVideosPage() {
                       className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
                       <VideoIcon className="h-12 w-12" />
                     </div>
                   )}
@@ -270,53 +262,48 @@ export default function MyVideosPage() {
               </Link>
               <div className="flex items-start justify-between gap-2 p-4">
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-900 line-clamp-2">{v.title}</p>
+                  <p className="font-medium text-slate-900 line-clamp-2 dark:text-white">{v.title}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <StatusBadge status={v.status} />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {formatDuration(v.duration)}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       · {v._count.clips} {v._count.clips === 1 ? "clip" : "clips"}
                     </span>
                   </div>
                 </div>
-                <div className="ml-1 flex flex-col items-end gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openDeleteModal(v)}
-                    className="rounded-full p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                    aria-label="Delete video"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 7h12M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7m-7 0h8m-9 0 1 12a1.5 1.5 0 0 0 1.5 1.5h5a1.5 1.5 0 0 0 1.5-1.5l1-12"
-                      />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6M14 11v6" />
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(v)}
+                  className="rounded-full p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+                  aria-label="Delete video"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7m-7 0h8m-9 0 1 12a1.5 1.5 0 0 0 1.5 1.5h5a1.5 1.5 0 0 0 1.5-1.5l1-12" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6M14 11v6" />
+                  </svg>
+                </button>
               </div>
             </div>
           </li>
         ))}
       </ul>
 
+      {/* Delete confirmation modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-slate-900">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
               Delete this video?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               This will permanently remove{" "}
               <span className="font-medium">"{deleteTarget.title || "Untitled video"}"</span>,
               its original file, and all generated clips. This action cannot be undone.
@@ -324,8 +311,8 @@ export default function MyVideosPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={closeDeleteModal}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               >
                 Cancel
               </button>
@@ -335,7 +322,7 @@ export default function MyVideosPage() {
                 disabled={deletingId === deleteTarget.id}
                 className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-70"
               >
-                {deletingId === deleteTarget.id ? "Deleting…" : "Delete"}
+                {deletingId === deleteTarget.id ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
