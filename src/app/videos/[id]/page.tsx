@@ -313,24 +313,6 @@ export default function VideoDetailPage({
             >
               {loading ? "Generating..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
             </button>
-            {clips.some((c) => c.status === "PENDING") && (
-              <button
-                onClick={handleRenderAll}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-              >
-                Render all
-              </button>
-            )}
-            {clips.some((c) => c.status === "COMPLETED") && (
-              <a
-                href={`/api/videos/${id}/download-clips`}
-                download
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-              >
-                <DownloadIcon className="h-4 w-4" />
-                Download all
-              </a>
-            )}
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
@@ -381,144 +363,203 @@ export default function VideoDetailPage({
 
       {/* Clips gallery */}
       {clips.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {filteredClips.map((c) => (
-            <article
-              key={c.id}
-              role={c.status === "COMPLETED" ? "button" : undefined}
-              tabIndex={c.status === "COMPLETED" ? 0 : undefined}
-              onClick={() => { if (c.status === "COMPLETED") setSelectedClipId(c.id); }}
-              onKeyDown={(e) => { if (c.status === "COMPLETED" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setSelectedClipId(c.id); } }}
-              className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition dark:bg-slate-800 ${
-                c.status === "COMPLETED"
-                  ? "cursor-pointer border-slate-200 hover:shadow-lg hover:border-indigo-300 dark:border-slate-700 dark:hover:border-indigo-500"
-                  : "border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              {/* Vertical thumbnail */}
-              <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50">
-                {c.status === "COMPLETED" && (c.thumbnailUrl || c.outputUrl) ? (
-                  <>
-                    {c.thumbnailUrl ? (
-                      <img
-                        src={toSameOriginUrl(c.thumbnailUrl)}
-                        alt={c.title}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <video
-                        src={toSameOriginUrl(c.outputUrl!)}
-                        preload="metadata"
-                        muted
-                        playsInline
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition duration-300 group-hover:bg-black/30">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 opacity-0 shadow-xl transition duration-300 group-hover:opacity-100 dark:bg-slate-900/80">
-                        <PlayIcon className="ml-0.5 h-5 w-5 text-slate-900 dark:text-white" />
-                      </div>
-                    </div>
-                    {/* Gradient bottom fade for text readability */}
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
-                  </>
-                ) : c.status === "PROCESSING" ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
-                    <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400" />
-                    {c.renderProgress != null && c.renderProgress > 0 ? (
-                      <div className="w-full max-w-[8rem]">
-                        <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
-                          <div className="h-full rounded-full bg-indigo-600 transition-all duration-500 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
-                        </div>
-                        <p className="mt-1.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{c.renderProgress}%</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Rendering...</p>
-                    )}
-                  </div>
-                ) : (
-                  /* PENDING state */
-                  <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-600/50">
-                      <ClipIcon className="h-6 w-6 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRenderClip(c.id); }}
-                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-                    >
-                      Render clip
-                    </button>
-                  </div>
-                )}
-
-                {/* Overlaid metadata badges — shown on all states */}
-                <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
-                  {c.confidence != null && (
-                    <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                      {(c.confidence * 100).toFixed(0)}%
-                    </span>
-                  )}
-                  {c.speaker && (
-                    <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                      S{c.speaker}
-                    </span>
-                  )}
+        <div className="space-y-10">
+          {/* Rendered clips */}
+          {readyClips.length > 0 && (
+            <section>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white">Rendered clips</h2>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                    {readyClips.length}
+                  </span>
                 </div>
-
-                {/* Duration badge — bottom right */}
-                <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
-                  {Math.floor((c.endTime - c.startTime) / 60)}:{String(Math.round((c.endTime - c.startTime) % 60)).padStart(2, "0")}
-                </span>
+                <a
+                  href={`/api/videos/${id}/download-clips`}
+                  download
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                  <DownloadIcon className="h-3.5 w-3.5" />
+                  Download all
+                </a>
               </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {readyClips.map((c) => (
+                  <article
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedClipId(c.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedClipId(c.id); } }}
+                    className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500"
+                  >
+                    <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-900">
+                      {c.thumbnailUrl ? (
+                        <img
+                          src={toSameOriginUrl(c.thumbnailUrl)}
+                          alt={c.title}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      ) : c.outputUrl ? (
+                        <video
+                          src={toSameOriginUrl(c.outputUrl)}
+                          preload="metadata"
+                          muted
+                          playsInline
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null}
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition duration-300 group-hover:bg-black/30">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 opacity-0 shadow-xl transition duration-300 group-hover:opacity-100 dark:bg-slate-900/80">
+                          <PlayIcon className="ml-0.5 h-5 w-5 text-slate-900 dark:text-white" />
+                        </div>
+                      </div>
+                      {/* Gradient bottom fade */}
+                      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
+                      {/* Overlaid badges */}
+                      <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
+                        {c.confidence != null && (
+                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                            {(c.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        {c.speaker && (
+                          <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                            S{c.speaker}
+                          </span>
+                        )}
+                      </div>
+                      <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+                        {Math.floor((c.endTime - c.startTime) / 60)}:{String(Math.round((c.endTime - c.startTime) % 60)).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2.5">
+                      <h4 className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 dark:text-white">{c.title}</h4>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <a
+                          href={`/api/clips/${c.id}/download`}
+                          download
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                        >
+                          <DownloadIcon className="h-3 w-3" />
+                          Download
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = c.feedback === "like" ? null : "like";
+                            fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                            setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                          }}
+                          className={`rounded-md p-1 transition ${c.feedback === "like" ? "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                          title="More like this"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = c.feedback === "dislike" ? null : "dislike";
+                            fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                            setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                          }}
+                          className={`rounded-md p-1 transition ${c.feedback === "dislike" ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                          title="Less like this"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
-              {/* Card footer */}
-              <div className="px-3 py-2.5">
-                <h4 className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 dark:text-white">{c.title}</h4>
-                {c.status === "COMPLETED" && (
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <a
-                      href={`/api/clips/${c.id}/download`}
-                      download
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                    >
-                      <DownloadIcon className="h-3 w-3" />
-                      Download
-                    </a>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const next = c.feedback === "like" ? null : "like";
-                        fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
-                        setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
-                      }}
-                      className={`rounded-md p-1 transition ${c.feedback === "like" ? "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
-                      title="More like this"
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const next = c.feedback === "dislike" ? null : "dislike";
-                        fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
-                        setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
-                      }}
-                      className={`rounded-md p-1 transition ${c.feedback === "dislike" ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
-                      title="Less like this"
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
-                      </svg>
-                    </button>
-                  </div>
+          {/* Pending / rendering clips */}
+          {pendingClips.length > 0 && (
+            <section>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white">To render</h2>
+                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                    {pendingClips.length}
+                  </span>
+                </div>
+                {pendingClips.some((c) => c.status === "PENDING") && (
+                  <button
+                    onClick={handleRenderAll}
+                    className="text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                  >
+                    Render all
+                  </button>
                 )}
               </div>
-            </article>
-          ))}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {pendingClips.map((c) => (
+                  <article
+                    key={c.id}
+                    className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50">
+                      {c.status === "PROCESSING" ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
+                          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400" />
+                          {c.renderProgress != null && c.renderProgress > 0 ? (
+                            <div className="w-full max-w-[8rem]">
+                              <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
+                                <div className="h-full rounded-full bg-indigo-600 transition-all duration-500 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
+                              </div>
+                              <p className="mt-1.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{c.renderProgress}%</p>
+                            </div>
+                          ) : (
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Rendering...</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-600/50">
+                            <ClipIcon className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                          </div>
+                          <button
+                            onClick={() => handleRenderClip(c.id)}
+                            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                          >
+                            Render clip
+                          </button>
+                        </div>
+                      )}
+                      {/* Overlaid badges */}
+                      <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
+                        {c.confidence != null && (
+                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                            {(c.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        {c.speaker && (
+                          <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                            S{c.speaker}
+                          </span>
+                        )}
+                      </div>
+                      <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+                        {Math.floor((c.endTime - c.startTime) / 60)}:{String(Math.round((c.endTime - c.startTime) % 60)).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2.5">
+                      <h4 className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 dark:text-white">{c.title}</h4>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center dark:border-slate-600 dark:bg-slate-800">
