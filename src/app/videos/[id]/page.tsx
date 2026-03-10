@@ -74,6 +74,7 @@ interface Clip {
   confidence: number | null;
   status: string;
   outputUrl?: string | null;
+  thumbnailUrl?: string | null;
   renderProgress?: number | null;
   speaker?: string | null;
   feedback?: string | null;
@@ -109,6 +110,7 @@ export default function VideoDetailPage({
   };
   const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(null);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 
   const fetchVideo = async (opts: { silent?: boolean } = {}) => {
     if (!opts.silent) setLoadingVideo(true);
@@ -158,6 +160,13 @@ export default function VideoDetailPage({
       .catch(() => {})
       .finally(() => setLoadingTranscript(false));
   }, [id, video?.status, transcriptData, loadingTranscript]);
+
+  useEffect(() => {
+    if (!selectedClipId) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedClipId(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedClipId]);
 
   const getClipTranscriptText = (clip: Clip) => {
     if (!transcriptData) return "";
@@ -241,6 +250,10 @@ export default function VideoDetailPage({
   const isProcessing = video?.status === "UPLOADED" || video?.status === "TRANSCRIBING" || video?.status === "ANALYZING";
   const videoTitle = video?.title ?? "Video";
   const speakers = [...new Set(clips.map((c) => c.speaker).filter(Boolean))] as string[];
+  const filteredClips = clips.filter((c) => !speakerFilter || c.speaker === speakerFilter);
+  const readyClips = filteredClips.filter((c) => c.status === "COMPLETED");
+  const pendingClips = filteredClips.filter((c) => c.status !== "COMPLETED");
+  const selectedClip = selectedClipId ? clips.find((c) => c.id === selectedClipId) ?? null : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -344,7 +357,7 @@ export default function VideoDetailPage({
       <section>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Clips{clips.length > 0 ? ` (${clips.filter((c) => !speakerFilter || c.speaker === speakerFilter).length})` : ""}
+            Clips{clips.length > 0 ? ` (${filteredClips.length})` : ""}
           </h2>
           {speakers.length > 1 && (
             <div className="flex gap-1">
@@ -376,132 +389,126 @@ export default function VideoDetailPage({
         </div>
 
         {clips.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {clips.filter((c) => !speakerFilter || c.speaker === speakerFilter).map((c) => (
-              <article key={c.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-slate-900 line-clamp-2 dark:text-white">{c.title}</h3>
-                    <StatusBadge status={c.status} />
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                    <span>{c.startTime.toFixed(1)}s - {c.endTime.toFixed(1)}s</span>
-                    {c.confidence != null && <span>{(c.confidence * 100).toFixed(0)}% match</span>}
-                    {c.speaker && (
-                      <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                        Speaker {c.speaker}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {c.outputUrl ? (
-                  <div className="relative bg-slate-900">
-                    <video
-                      src={toSameOriginUrl(c.outputUrl)}
-                      controls
-                      preload="metadata"
-                      playsInline
-                      className="aspect-[9/16] w-full max-w-full object-contain"
-                      onError={() => setVideoErrors((prev) => ({ ...prev, [c.id]: true }))}
-                      onLoadedData={() => setVideoErrors((prev) => ({ ...prev, [c.id]: false }))}
-                    />
-                    {videoErrors[c.id] && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 p-4 text-center text-sm text-white">
-                        <span>Video could not load.</span>
-                        <a href={toSameOriginUrl(c.outputUrl)} target="_blank" rel="noopener noreferrer" className="font-medium underline">
-                          Open in new tab
+          <div className="space-y-8">
+            {/* Ready clips — compact thumbnail grid */}
+            {readyClips.length > 0 && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Ready ({readyClips.length})
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {readyClips.map((c) => (
+                    <article
+                      key={c.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedClipId(c.id)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedClipId(c.id); } }}
+                      className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-600"
+                    >
+                      <div className="relative h-48 overflow-hidden bg-slate-900">
+                        {c.thumbnailUrl ? (
+                          <img
+                            src={toSameOriginUrl(c.thumbnailUrl)}
+                            alt={c.title}
+                            className="h-full w-full object-cover transition group-hover:scale-105"
+                          />
+                        ) : c.outputUrl ? (
+                          <video
+                            src={toSameOriginUrl(c.outputUrl)}
+                            preload="metadata"
+                            muted
+                            playsInline
+                            className="h-full w-full object-cover"
+                          />
+                        ) : null}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
+                          <div className="rounded-full bg-white/90 p-2.5 opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-slate-800/90">
+                            <PlayIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                          </div>
+                        </div>
+                        <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+                          {Math.round(c.endTime - c.startTime)}s
+                        </span>
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-medium text-slate-900 line-clamp-1 dark:text-white">{c.title}</h4>
+                        <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                          <span>{c.startTime.toFixed(1)}s - {c.endTime.toFixed(1)}s</span>
+                          {c.confidence != null && <span>{(c.confidence * 100).toFixed(0)}%</span>}
+                          {c.speaker && (
+                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                              Speaker {c.speaker}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-100 px-3 py-2 dark:border-slate-700">
+                        <a
+                          href={`/api/clips/${c.id}/download`}
+                          download
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                          <DownloadIcon className="h-3.5 w-3.5" />
+                          Download
                         </a>
                       </div>
-                    )}
-                    <div className="border-t border-slate-700 p-3">
-                      <a
-                        href={`/api/clips/${c.id}/download`}
-                        download
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-700"
-                      >
-                        <DownloadIcon className="h-4 w-4" />
-                        Download clip
-                      </a>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex aspect-[9/16] w-full flex-col items-center justify-center gap-3 bg-slate-100 dark:bg-slate-700/50">
-                    {c.status === "PROCESSING" ? (
-                      <>
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent dark:border-indigo-400 dark:border-t-transparent" />
-                        {c.renderProgress != null && c.renderProgress > 0 ? (
-                          <>
-                            <div className="mx-4 h-1.5 w-3/4 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
-                              <div className="h-full rounded-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
-                            </div>
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Rendering... {c.renderProgress}%</span>
-                          </>
-                        ) : (
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Rendering...</span>
-                        )}
-                      </>
-                    ) : (
-                      <ClipIcon className="h-10 w-10 text-slate-400 dark:text-slate-500" />
-                    )}
-                  </div>
-                )}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                {transcriptData && (
-                  <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/80">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Transcript</p>
-                    <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-200 bg-white/60 px-3 py-2 dark:border-slate-600 dark:bg-slate-700/50">
-                      {getClipTranscriptText(c) ? (
-                        <p className="text-sm text-slate-700 dark:text-slate-300">{getClipTranscriptText(c)}</p>
+            {/* Pending / processing clips — compact list */}
+            {pendingClips.length > 0 && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  {pendingClips.some((c) => c.status === "PROCESSING") ? "Rendering" : "Pending"} ({pendingClips.length})
+                </h3>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800">
+                  {pendingClips.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate dark:text-white">{c.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {c.startTime.toFixed(1)}s - {c.endTime.toFixed(1)}s
+                          {c.confidence != null && <> &middot; {(c.confidence * 100).toFixed(0)}% match</>}
+                          {c.speaker && <> &middot; Speaker {c.speaker}</>}
+                        </p>
+                      </div>
+                      {c.status === "PROCESSING" ? (
+                        <div className="flex shrink-0 items-center gap-2.5">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent dark:border-indigo-400 dark:border-t-transparent" />
+                          {c.renderProgress != null && c.renderProgress > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
+                                <div className="h-full rounded-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{c.renderProgress}%</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Rendering...</span>
+                          )}
+                        </div>
                       ) : (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">No transcript for this range.</p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <StatusBadge status={c.status} />
+                          {c.status === "PENDING" && (
+                            <button
+                              onClick={() => handleRenderClip(c.id)}
+                              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-500"
+                            >
+                              Render
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
-
-                {c.status === "PENDING" && (
-                  <div className="border-t border-slate-100 p-4 dark:border-slate-700">
-                    <button
-                      onClick={() => handleRenderClip(c.id)}
-                      className="w-full rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500"
-                    >
-                      Render clip
-                    </button>
-                  </div>
-                )}
-
-                {/* Feedback */}
-                <div className="flex items-center justify-end gap-1 border-t border-slate-100 px-4 py-2 dark:border-slate-700">
-                  <button
-                    onClick={async () => {
-                      const next = c.feedback === "like" ? null : "like";
-                      await fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
-                      setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
-                    }}
-                    className={`rounded-lg p-1.5 text-sm transition ${c.feedback === "like" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:text-green-600 dark:hover:text-green-400"}`}
-                    title="More like this"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const next = c.feedback === "dislike" ? null : "dislike";
-                      await fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
-                      setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
-                    }}
-                    className={`rounded-lg p-1.5 text-sm transition ${c.feedback === "dislike" ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:text-red-600 dark:hover:text-red-400"}`}
-                    title="Less like this"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
-                    </svg>
-                  </button>
+                  ))}
                 </div>
-              </article>
-            ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-600 dark:bg-slate-800">
@@ -517,6 +524,125 @@ export default function VideoDetailPage({
           </div>
         )}
       </section>
+
+      {/* Clip detail modal */}
+      {selectedClip && selectedClip.outputUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+          onClick={() => setSelectedClipId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-slate-900 line-clamp-2 dark:text-white">{selectedClip.title}</h3>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span>{selectedClip.startTime.toFixed(1)}s - {selectedClip.endTime.toFixed(1)}s</span>
+                  {selectedClip.confidence != null && <span>{(selectedClip.confidence * 100).toFixed(0)}% match</span>}
+                  {selectedClip.speaker && (
+                    <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                      Speaker {selectedClip.speaker}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedClipId(null)}
+                aria-label="Close"
+                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal body — scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Video player */}
+              <div className="relative bg-slate-900">
+                <video
+                  src={toSameOriginUrl(selectedClip.outputUrl)}
+                  controls
+                  autoPlay
+                  preload="metadata"
+                  playsInline
+                  className="aspect-[9/16] w-full object-contain"
+                  onError={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: true }))}
+                  onLoadedData={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: false }))}
+                />
+                {videoErrors[selectedClip.id] && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 p-4 text-center text-sm text-white">
+                    <span>Video could not load.</span>
+                    <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                      Open in new tab
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions row */}
+              <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+                <a
+                  href={`/api/clips/${selectedClip.id}/download`}
+                  download
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500"
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                  Download clip
+                </a>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={async () => {
+                      const next = selectedClip.feedback === "like" ? null : "like";
+                      await fetch(`/api/clips/${selectedClip.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                      setClips((prev) => prev.map((cl) => cl.id === selectedClip.id ? { ...cl, feedback: next } : cl));
+                    }}
+                    className={`rounded-lg p-2 transition ${selectedClip.feedback === "like" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:bg-slate-100 hover:text-green-600 dark:hover:bg-slate-700 dark:hover:text-green-400"}`}
+                    title="More like this"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const next = selectedClip.feedback === "dislike" ? null : "dislike";
+                      await fetch(`/api/clips/${selectedClip.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                      setClips((prev) => prev.map((cl) => cl.id === selectedClip.id ? { ...cl, feedback: next } : cl));
+                    }}
+                    className={`rounded-lg p-2 transition ${selectedClip.feedback === "dislike" ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-700 dark:hover:text-red-400"}`}
+                    title="Less like this"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Transcript excerpt */}
+              {transcriptData && (
+                <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Transcript</p>
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 dark:border-slate-600 dark:bg-slate-700/50">
+                    {getClipTranscriptText(selectedClip) ? (
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{getClipTranscriptText(selectedClip)}</p>
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">No transcript for this range.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transcript section */}
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -652,6 +778,14 @@ export default function VideoDetailPage({
         </div>
       )}
     </div>
+  );
+}
+
+function PlayIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M8 5.14v14l11-7-11-7z" />
+    </svg>
   );
 }
 

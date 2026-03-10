@@ -14,7 +14,7 @@ npm run worker:transcribe # Only transcription queue (API-bound)
 npm run worker:render     # Only render queue (CPU-bound)
 ```
 
-Build requires `prisma generate` first (handled automatically by build script and postinstall).
+Build requires `prisma generate` first (handled automatically by build script and postinstall). No test framework is configured — there are no tests in this project.
 
 ## Architecture
 
@@ -26,6 +26,7 @@ Build requires `prisma generate` first (handled automatically by build script an
 - **NextAuth v4** with Google OAuth (DB session strategy, 30-day max age)
 - **BullMQ** + Redis/Upstash for background job queue
 - **Razorpay** for subscriptions (not Stripe)
+- **Email**: Pluggable transport (`src/lib/email/index.ts`) — console in dev, Resend API in prod (`EMAIL_PROVIDER=resend`)
 
 ### Two-Process Architecture
 1. **Next.js server**: Handles API routes, serves UI, enqueues jobs
@@ -61,8 +62,9 @@ Build requires `prisma generate` first (handled automatically by build script an
 - `src/lib/video/` — Upload handling, metadata extraction, clip rendering (FFmpeg)
 - `src/lib/storage/` — Storage abstraction (Local/S3)
 - `src/lib/queue/` — BullMQ setup with lazy Redis connection
+- `src/lib/email/` — Notification emails (video ready, clips rendered, quota warning)
 - `src/worker/` — Background job worker (transcription, clip generation)
-- `prisma/schema.prisma` — Database schema (User, Video, Clip, Job models)
+- `prisma/schema.prisma` — Database schema (User, Account, Session, Video, Clip, Job, WebhookEvent)
 
 ## Key Patterns
 
@@ -77,3 +79,9 @@ Build requires `prisma generate` first (handled automatically by build script an
 - **Rate limiting**: In-memory sliding window per user (`src/lib/rateLimit.ts`) on upload, render, download, subscription endpoints
 - **Webhook idempotency**: `WebhookEvent` model prevents duplicate Razorpay webhook processing
 - **File validation**: Extension whitelist + MIME type checks on both upload paths
+- **Circuit breaker**: `src/lib/circuitBreaker.ts` wraps AssemblyAI and OpenAI calls — opens after 5 failures, 60s cooldown
+- **Dark mode**: Class-based toggle with localStorage persistence (Tailwind v4 `@custom-variant dark`)
+
+## Environment Variables
+
+Required for local dev: `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ASSEMBLYAI_API_KEY`, `OPENAI_API_KEY`, `STORAGE_TYPE` (local/s3), `STORAGE_PATH`. Razorpay keys needed for billing. See `.env` for full list.
