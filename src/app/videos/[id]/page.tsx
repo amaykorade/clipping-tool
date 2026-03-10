@@ -256,7 +256,7 @@ export default function VideoDetailPage({
   const selectedClip = selectedClipId ? clips.find((c) => c.id === selectedClipId) ?? null : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Status banners */}
       {video?.status === "ERROR" && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 dark:border-red-700/50 dark:bg-red-950/40">
@@ -269,16 +269,6 @@ export default function VideoDetailPage({
           <p className="mt-1 text-sm text-red-700 dark:text-red-400">
             {video.errorDisplay?.action ?? "Delete this video and upload it again to retry."}
           </p>
-        </div>
-      )}
-
-      {video?.status === "READY" && hasRenderingClips && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-5 py-3.5 text-sm text-indigo-800 dark:border-indigo-700/50 dark:bg-indigo-950/40 dark:text-indigo-300">
-          {clips.some((c) => c.status === "PROCESSING") ? (
-            <><strong>Creating video files...</strong> Clips will appear here when ready.</>
-          ) : (
-            <><strong>Clips ready.</strong> Click &quot;Create video files&quot; or &quot;Render clip&quot; on each to generate downloadable videos.</>
-          )}
         </div>
       )}
 
@@ -302,49 +292,85 @@ export default function VideoDetailPage({
       )}
 
       {/* Header */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-            {videoTitle}
-          </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <StatusBadge status={video?.status ?? "---"} />
-            <span>9:16 vertical</span>
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <button
-            onClick={handleGenerateClips}
-            disabled={loading || video?.status !== "READY"}
-            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Generating..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
-          </button>
-          {clips.some((c) => c.status === "PENDING") && (
+      <header>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {videoTitle}
+            </h1>
+            <div className="mt-1.5 flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+              <StatusBadge status={video?.status ?? "---"} />
+              {clips.length > 0 && (
+                <span>{readyClips.length} of {filteredClips.length} rendered</span>
+              )}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
             <button
-              onClick={handleRenderAll}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              onClick={handleGenerateClips}
+              disabled={loading || video?.status !== "READY"}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Create video files
+              {loading ? "Generating..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
             </button>
-          )}
-          {clips.some((c) => c.status === "COMPLETED") && (
-            <a
-              href={`/api/videos/${id}/download-clips`}
-              download
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+            {clips.some((c) => c.status === "PENDING") && (
+              <button
+                onClick={handleRenderAll}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              >
+                Render all
+              </button>
+            )}
+            {clips.some((c) => c.status === "COMPLETED") && (
+              <a
+                href={`/api/videos/${id}/download-clips`}
+                download
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              >
+                <DownloadIcon className="h-4 w-4" />
+                Download all
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-700/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
             >
-              Download all (.zip)
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={() => setShowDeleteModal(true)}
-            className="rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-700/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
-          >
-            Delete
-          </button>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Speaker filter pills */}
+        {speakers.length > 1 && (
+          <div className="mt-4 flex gap-1.5">
+            <button
+              onClick={() => setSpeakerFilter(null)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                speakerFilter === null
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+              }`}
+            >
+              All
+            </button>
+            {speakers.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSpeakerFilter(s === speakerFilter ? null : s)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  speakerFilter === s
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                }`}
+              >
+                Speaker {s}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       {error && (
@@ -353,220 +379,189 @@ export default function VideoDetailPage({
         </div>
       )}
 
-      {/* Clips section */}
-      <section>
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Clips{clips.length > 0 ? ` (${filteredClips.length})` : ""}
-          </h2>
-          {speakers.length > 1 && (
-            <div className="flex gap-1">
-              <button
-                onClick={() => setSpeakerFilter(null)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  speakerFilter === null
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                }`}
-              >
-                All
-              </button>
-              {speakers.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSpeakerFilter(s === speakerFilter ? null : s)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                    speakerFilter === s
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                  }`}
-                >
-                  Speaker {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {clips.length > 0 ? (
-          <div className="space-y-8">
-            {/* Ready clips — compact thumbnail grid */}
-            {readyClips.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Ready ({readyClips.length})
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {readyClips.map((c) => (
-                    <article
-                      key={c.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedClipId(c.id)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedClipId(c.id); } }}
-                      className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-600"
-                    >
-                      <div className="relative h-48 overflow-hidden bg-slate-900">
-                        {c.thumbnailUrl ? (
-                          <img
-                            src={toSameOriginUrl(c.thumbnailUrl)}
-                            alt={c.title}
-                            className="h-full w-full object-cover transition group-hover:scale-105"
-                          />
-                        ) : c.outputUrl ? (
-                          <video
-                            src={toSameOriginUrl(c.outputUrl)}
-                            preload="metadata"
-                            muted
-                            playsInline
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
-                          <div className="rounded-full bg-white/90 p-2.5 opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-slate-800/90">
-                            <PlayIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                          </div>
-                        </div>
-                        <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
-                          {Math.round(c.endTime - c.startTime)}s
-                        </span>
+      {/* Clips gallery */}
+      {clips.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {filteredClips.map((c) => (
+            <article
+              key={c.id}
+              role={c.status === "COMPLETED" ? "button" : undefined}
+              tabIndex={c.status === "COMPLETED" ? 0 : undefined}
+              onClick={() => { if (c.status === "COMPLETED") setSelectedClipId(c.id); }}
+              onKeyDown={(e) => { if (c.status === "COMPLETED" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setSelectedClipId(c.id); } }}
+              className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition dark:bg-slate-800 ${
+                c.status === "COMPLETED"
+                  ? "cursor-pointer border-slate-200 hover:shadow-lg hover:border-indigo-300 dark:border-slate-700 dark:hover:border-indigo-500"
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              {/* Vertical thumbnail */}
+              <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50">
+                {c.status === "COMPLETED" && (c.thumbnailUrl || c.outputUrl) ? (
+                  <>
+                    {c.thumbnailUrl ? (
+                      <img
+                        src={toSameOriginUrl(c.thumbnailUrl)}
+                        alt={c.title}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <video
+                        src={toSameOriginUrl(c.outputUrl!)}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition duration-300 group-hover:bg-black/30">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 opacity-0 shadow-xl transition duration-300 group-hover:opacity-100 dark:bg-slate-900/80">
+                        <PlayIcon className="ml-0.5 h-5 w-5 text-slate-900 dark:text-white" />
                       </div>
-                      <div className="p-3">
-                        <h4 className="font-medium text-slate-900 line-clamp-1 dark:text-white">{c.title}</h4>
-                        <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                          <span>{c.startTime.toFixed(1)}s - {c.endTime.toFixed(1)}s</span>
-                          {c.confidence != null && <span>{(c.confidence * 100).toFixed(0)}%</span>}
-                          {c.speaker && (
-                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                              Speaker {c.speaker}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="border-t border-slate-100 px-3 py-2 dark:border-slate-700">
-                        <a
-                          href={`/api/clips/${c.id}/download`}
-                          download
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                        >
-                          <DownloadIcon className="h-3.5 w-3.5" />
-                          Download
-                        </a>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Pending / processing clips — compact list */}
-            {pendingClips.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {pendingClips.some((c) => c.status === "PROCESSING") ? "Rendering" : "Pending"} ({pendingClips.length})
-                </h3>
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800">
-                  {pendingClips.map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate dark:text-white">{c.title}</p>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                          {c.startTime.toFixed(1)}s - {c.endTime.toFixed(1)}s
-                          {c.confidence != null && <> &middot; {(c.confidence * 100).toFixed(0)}% match</>}
-                          {c.speaker && <> &middot; Speaker {c.speaker}</>}
-                        </p>
-                      </div>
-                      {c.status === "PROCESSING" ? (
-                        <div className="flex shrink-0 items-center gap-2.5">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent dark:border-indigo-400 dark:border-t-transparent" />
-                          {c.renderProgress != null && c.renderProgress > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
-                                <div className="h-full rounded-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
-                              </div>
-                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{c.renderProgress}%</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-500 dark:text-slate-400">Rendering...</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex shrink-0 items-center gap-2">
-                          <StatusBadge status={c.status} />
-                          {c.status === "PENDING" && (
-                            <button
-                              onClick={() => handleRenderClip(c.id)}
-                              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-500"
-                            >
-                              Render
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </div>
-                  ))}
+                    {/* Gradient bottom fade for text readability */}
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
+                  </>
+                ) : c.status === "PROCESSING" ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400" />
+                    {c.renderProgress != null && c.renderProgress > 0 ? (
+                      <div className="w-full max-w-[8rem]">
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
+                          <div className="h-full rounded-full bg-indigo-600 transition-all duration-500 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
+                        </div>
+                        <p className="mt-1.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{c.renderProgress}%</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Rendering...</p>
+                    )}
+                  </div>
+                ) : (
+                  /* PENDING state */
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-600/50">
+                      <ClipIcon className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRenderClip(c.id); }}
+                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                    >
+                      Render clip
+                    </button>
+                  </div>
+                )}
+
+                {/* Overlaid metadata badges — shown on all states */}
+                <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
+                  {c.confidence != null && (
+                    <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                      {(c.confidence * 100).toFixed(0)}%
+                    </span>
+                  )}
+                  {c.speaker && (
+                    <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                      S{c.speaker}
+                    </span>
+                  )}
                 </div>
+
+                {/* Duration badge — bottom right */}
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+                  {Math.floor((c.endTime - c.startTime) / 60)}:{String(Math.round((c.endTime - c.startTime) % 60)).padStart(2, "0")}
+                </span>
               </div>
-            )}
+
+              {/* Card footer */}
+              <div className="px-3 py-2.5">
+                <h4 className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 dark:text-white">{c.title}</h4>
+                {c.status === "COMPLETED" && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <a
+                      href={`/api/clips/${c.id}/download`}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                    >
+                      <DownloadIcon className="h-3 w-3" />
+                      Download
+                    </a>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = c.feedback === "like" ? null : "like";
+                        fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                        setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                      }}
+                      className={`rounded-md p-1 transition ${c.feedback === "like" ? "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                      title="More like this"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = c.feedback === "dislike" ? null : "dislike";
+                        fetch(`/api/clips/${c.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
+                        setClips((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, feedback: next } : cl));
+                      }}
+                      className={`rounded-md p-1 transition ${c.feedback === "dislike" ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                      title="Less like this"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a3.5 3.5 0 003.5 3.5h.792c.278 0 .557-.183.644-.447l.876-2.628A1 1 0 0015.906 16H17m-7-2h2m5 0a2 2 0 002-2V6a2 2 0 00-2-2h-2.5" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center dark:border-slate-600 dark:bg-slate-800">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
+            <ClipIcon className="h-7 w-7 text-slate-400 dark:text-slate-500" />
           </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-600 dark:bg-slate-800">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
-              <ClipIcon className="h-7 w-7 text-slate-400 dark:text-slate-500" />
-            </div>
-            <p className="mt-4 font-medium text-slate-900 dark:text-white">No clips yet</p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {video?.status === "READY"
-                ? "Click Generate clips to find the best moments."
-                : "Clips will appear here automatically in a few minutes."}
-            </p>
-          </div>
-        )}
-      </section>
+          <p className="mt-4 font-medium text-slate-900 dark:text-white">No clips yet</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            {video?.status === "READY"
+              ? "Click Generate clips to find the best moments."
+              : "Clips will appear here automatically in a few minutes."}
+          </p>
+        </div>
+      )}
 
       {/* Clip detail modal */}
       {selectedClip && selectedClip.outputUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setSelectedClipId(null)}
         >
           <div
             role="dialog"
             aria-modal="true"
-            className="relative flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800"
+            className="relative mx-4 flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal header */}
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <div className="min-w-0">
-                <h3 className="font-semibold text-slate-900 line-clamp-2 dark:text-white">{selectedClip.title}</h3>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <span>{selectedClip.startTime.toFixed(1)}s - {selectedClip.endTime.toFixed(1)}s</span>
-                  {selectedClip.confidence != null && <span>{(selectedClip.confidence * 100).toFixed(0)}% match</span>}
-                  {selectedClip.speaker && (
-                    <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                      Speaker {selectedClip.speaker}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedClipId(null)}
-                aria-label="Close"
-                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+            {/* Close button — floating */}
+            <button
+              onClick={() => setSelectedClipId(null)}
+              aria-label="Close"
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-            {/* Modal body — scrollable */}
-            <div className="flex-1 overflow-y-auto">
-              {/* Video player */}
-              <div className="relative bg-slate-900">
+            {/* Video player */}
+            <div className="relative flex-1 overflow-y-auto">
+              <div className="relative bg-black">
                 <video
+                  key={selectedClip.id}
                   src={toSameOriginUrl(selectedClip.outputUrl)}
                   controls
                   autoPlay
@@ -577,33 +572,43 @@ export default function VideoDetailPage({
                   onLoadedData={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: false }))}
                 />
                 {videoErrors[selectedClip.id] && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 p-4 text-center text-sm text-white">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/90 p-4 text-center text-sm text-white">
                     <span>Video could not load.</span>
-                    <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                    <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-400 underline">
                       Open in new tab
                     </a>
                   </div>
                 )}
               </div>
 
-              {/* Actions row */}
-              <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-                <a
-                  href={`/api/clips/${selectedClip.id}/download`}
-                  download
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500"
-                >
-                  <DownloadIcon className="h-4 w-4" />
-                  Download clip
-                </a>
-                <div className="flex items-center gap-1">
+              {/* Info + actions */}
+              <div className="space-y-3 p-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">{selectedClip.title}</h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                    <span>{selectedClip.startTime.toFixed(1)}s – {selectedClip.endTime.toFixed(1)}s</span>
+                    {selectedClip.confidence != null && <span>{(selectedClip.confidence * 100).toFixed(0)}% match</span>}
+                    {selectedClip.speaker && <span>Speaker {selectedClip.speaker}</span>}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/api/clips/${selectedClip.id}/download`}
+                    download
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                  >
+                    <DownloadIcon className="h-4 w-4" />
+                    Download
+                  </a>
                   <button
                     onClick={async () => {
                       const next = selectedClip.feedback === "like" ? null : "like";
                       await fetch(`/api/clips/${selectedClip.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
                       setClips((prev) => prev.map((cl) => cl.id === selectedClip.id ? { ...cl, feedback: next } : cl));
                     }}
-                    className={`rounded-lg p-2 transition ${selectedClip.feedback === "like" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "text-slate-400 hover:bg-slate-100 hover:text-green-600 dark:hover:bg-slate-700 dark:hover:text-green-400"}`}
+                    className={`rounded-lg p-2.5 transition ${selectedClip.feedback === "like" ? "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400" : "bg-slate-100 text-slate-400 hover:text-green-600 dark:bg-slate-700 dark:hover:text-green-400"}`}
                     title="More like this"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -616,7 +621,7 @@ export default function VideoDetailPage({
                       await fetch(`/api/clips/${selectedClip.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: next }) });
                       setClips((prev) => prev.map((cl) => cl.id === selectedClip.id ? { ...cl, feedback: next } : cl));
                     }}
-                    className={`rounded-lg p-2 transition ${selectedClip.feedback === "dislike" ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" : "text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-700 dark:hover:text-red-400"}`}
+                    className={`rounded-lg p-2.5 transition ${selectedClip.feedback === "dislike" ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400" : "bg-slate-100 text-slate-400 hover:text-red-600 dark:bg-slate-700 dark:hover:text-red-400"}`}
                     title="Less like this"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -624,21 +629,17 @@ export default function VideoDetailPage({
                     </svg>
                   </button>
                 </div>
-              </div>
 
-              {/* Transcript excerpt */}
-              {transcriptData && (
-                <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-700">
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Transcript</p>
-                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 dark:border-slate-600 dark:bg-slate-700/50">
-                    {getClipTranscriptText(selectedClip) ? (
-                      <p className="text-sm text-slate-700 dark:text-slate-300">{getClipTranscriptText(selectedClip)}</p>
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">No transcript for this range.</p>
-                    )}
+                {/* Transcript */}
+                {transcriptData && getClipTranscriptText(selectedClip) && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Transcript</p>
+                    <div className="max-h-28 overflow-y-auto rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50">
+                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{getClipTranscriptText(selectedClip)}</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
