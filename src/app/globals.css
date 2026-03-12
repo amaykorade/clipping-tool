@@ -7,8 +7,8 @@
   --card: #ffffff;
   --border: #e2e8f0;
   --muted: #64748b;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --accent: #7e22ce;
+  --accent-hover: #6b21a8;
   --success: #059669;
   --error: #dc2626;
 }
@@ -19,8 +19,8 @@
   --card: #1e293b;
   --border: #334155;
   --muted: #94a3b8;
-  --accent: #818cf8;
-  --accent-hover: #6366f1;
+  --accent: #a855f7;
+  --accent-hover: #9333ea;
   --success: #34d399;
   --error: #f87171;
 }
@@ -46,3 +46,92 @@ body {
 /* Hide default details marker */
 details > summary { list-style: none; }
 details > summary::-webkit-details-marker { display: none; }
+
+/* ─── Compare page animations ─────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes gradient-rotate {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Rotating gradient border */
+.gradient-border {
+  position: relative;
+  isolation: isolate;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--gradient-angle, 0deg),
+    #7e22ce, #a855f7, #c084fc, #e9d5ff, #c084fc, #a855f7, #7e22ce
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: gradient-rotate 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Noise texture overlay */
+.noise-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Smooth details open/close */
+details[open] > dd,
+details[open] > .faq-answer {
+  animation: faq-open 0.3s ease-out;
+}
+
+@keyframes faq-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

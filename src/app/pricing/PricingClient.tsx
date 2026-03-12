@@ -89,7 +89,7 @@ export default function PricingClient({
             setLoading(null);
           },
         },
-        theme: { color: "#4f46e5" },
+        theme: { color: "#7e22ce" },
       });
 
       rzp.on("payment.failed", function () {
@@ -113,7 +113,7 @@ export default function PricingClient({
           onClick={() => setBilling("monthly")}
           className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
             billing === "monthly"
-              ? "bg-indigo-600 text-white shadow-md"
+              ? "bg-purple-700 text-white shadow-md"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           }`}
         >
@@ -124,7 +124,7 @@ export default function PricingClient({
           onClick={() => setBilling("yearly")}
           className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition ${
             billing === "yearly"
-              ? "bg-indigo-600 text-white shadow-md"
+              ? "bg-purple-700 text-white shadow-md"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           }`}
         >
@@ -132,7 +132,7 @@ export default function PricingClient({
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
               billing === "yearly"
-                ? "bg-indigo-400/30 text-white"
+                ? "bg-purple-400/30 text-white"
                 : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
             }`}
           >
@@ -160,12 +160,12 @@ export default function PricingClient({
               key={p.id}
               className={`relative rounded-2xl border-2 p-6 transition-shadow ${
                 p.popular
-                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg dark:bg-indigo-950/20"
+                  ? "border-purple-600 bg-purple-50/30 shadow-lg dark:bg-purple-950/20"
                   : "border-slate-200 bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
               }`}
             >
               {p.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-1 text-xs font-semibold text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-purple-700 px-4 py-1 text-xs font-semibold text-white">
                   Most popular
                 </span>
               )}
@@ -217,12 +217,12 @@ export default function PricingClient({
                   {!signedIn ? (
                     <Link
                       href="/"
-                      className="block w-full rounded-xl bg-indigo-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-500"
+                      className="block w-full rounded-xl bg-purple-700 py-3 text-center text-sm font-semibold text-white transition hover:bg-purple-600"
                     >
                       Sign in to get started
                     </Link>
                   ) : p.id === currentPlan && currentBilling != null && billing === currentBilling ? (
-                    <div className="flex w-full items-center justify-center rounded-xl border-2 border-indigo-500 py-3 text-sm font-semibold text-indigo-600">
+                    <div className="flex w-full items-center justify-center rounded-xl border-2 border-purple-600 py-3 text-sm font-semibold text-purple-700">
                       Current plan
                     </div>
                   ) : p.id === currentPlan && (currentBilling == null || billing !== currentBilling) ? (
@@ -230,7 +230,7 @@ export default function PricingClient({
                       type="button"
                       onClick={() => handleUpgrade(p.id, billing)}
                       disabled={loading !== null}
-                      className="w-full rounded-xl border-2 border-indigo-500 bg-indigo-50 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:opacity-70"
+                      className="w-full rounded-xl border-2 border-purple-600 bg-purple-50 py-3 text-sm font-semibold text-purple-700 transition hover:bg-purple-100 disabled:opacity-70"
                     >
                       {loading === `${p.id}-${billing}` ? "Opening payment…" : currentBilling == null ? `Select ${billing === "yearly" ? "yearly" : "monthly"}` : `Switch to ${billing === "yearly" ? "yearly" : "monthly"}`}
                     </button>
@@ -248,7 +248,7 @@ export default function PricingClient({
                       disabled={loading !== null}
                       className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition ${
                         p.popular
-                          ? "bg-indigo-600 hover:bg-indigo-500 disabled:opacity-70"
+                          ? "bg-purple-700 hover:bg-purple-600 disabled:opacity-70"
                           : "bg-slate-800 hover:bg-slate-700 disabled:opacity-70"
                       }`}
                     >

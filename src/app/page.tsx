@@ -1,5 +1,34 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getBaseUrl } from "@/lib/seo";
+
+const baseUrl = getBaseUrl();
+
+export function generateMetadata(): Metadata {
+  return {
+    title: "Kllivo — AI Video Clip Generator for Reels, TikTok & YouTube Shorts",
+    description:
+      "Turn long-form videos into short-form clips with AI. Topic-aware segmentation, sentence-boundary cuts, and 100+ languages. Free to start, no credit card required.",
+    keywords: [
+      "ai video clip generator",
+      "video to shorts",
+      "ai video clipping tool",
+      "turn long video into clips",
+      "video to reels",
+      "video to tiktok",
+      "ai video repurposing",
+      "youtube shorts maker",
+      "podcast to clips",
+      "kllivo",
+    ],
+    openGraph: {
+      title: "Kllivo — AI Video Clip Generator",
+      description:
+        "Upload once, get AI-generated 9:16 clips for Reels, TikTok & Shorts. Topic-aware segmentation, 100+ languages.",
+      url: baseUrl,
+    },
+  };
+}
 
 export default async function Home({
   searchParams,
@@ -8,36 +37,6 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const showSignInPrompt = params?.upload === "signin";
-  const baseUrl = getBaseUrl();
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": `${baseUrl}/#website`,
-        url: baseUrl,
-        name: "Kllivo",
-        description: "Turn long-form video into Reels, TikTok & YouTube Shorts.",
-        publisher: { "@id": `${baseUrl}/#organization` },
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": `${baseUrl}/#application`,
-        name: "Kllivo",
-        applicationCategory: "MultimediaApplication",
-        operatingSystem: "Web",
-        description: "AI-powered video clip generator. Upload long-form videos, get 9:16 clips for Reels, TikTok and YouTube Shorts.",
-        url: baseUrl,
-      },
-      {
-        "@type": "Organization",
-        "@id": `${baseUrl}/#organization`,
-        name: "Kllivo",
-        url: baseUrl,
-      },
-    ],
-  };
 
   const features = [
     {
@@ -148,7 +147,7 @@ export default async function Home({
     },
     {
       q: "What makes Kllivo different from other clipping tools?",
-      a: "Most tools cut by silence or timestamps. Kllivo analyzes the transcript for topic beats, hook strength, and complete ideas — so every clip starts strong and ends at a natural point.",
+      a: "Most tools cut by silence or timestamps. Kllivo analyzes the transcript for topic beats, hook strength, and complete ideas — so every clip starts strong and ends at a natural point. See how we compare to Opus Clip, Vizard, and more.",
     },
     {
       q: "Are the clips really ready to post?",
@@ -163,6 +162,63 @@ export default async function Home({
       a: "Yes. Our transcription provider supports 100+ languages. Clip scoring and segmentation work on any language.",
     },
   ];
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "Kllivo",
+        description: "Turn long-form video into Reels, TikTok & YouTube Shorts.",
+        publisher: { "@id": `${baseUrl}/#organization` },
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${baseUrl}/#application`,
+        name: "Kllivo",
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Web",
+        description:
+          "AI-powered video clip generator. Upload long-form videos, get 9:16 clips for Reels, TikTok and YouTube Shorts.",
+        url: baseUrl,
+        offers: {
+          "@type": "AggregateOffer",
+          lowPrice: "0",
+          highPrice: "49",
+          priceCurrency: "USD",
+          offerCount: 3,
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${baseUrl}/#organization`,
+        name: "Kllivo",
+        url: baseUrl,
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: faqs.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      },
+      {
+        "@type": "HowTo",
+        name: "How to turn long videos into short clips with AI",
+        description:
+          "Use Kllivo to automatically generate short-form clips from long-form videos in three simple steps.",
+        step: steps.map((s, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          name: s.title,
+          text: s.body,
+        })),
+      },
+    ],
+  };
 
   const stats = [
     { value: "10×", label: "more clips from one video" },
@@ -189,29 +245,33 @@ export default async function Home({
 
       {/* ─── Hero ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-3xl bg-slate-900 px-6 py-20 text-white sm:px-12 sm:py-32 md:px-16">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(99,102,241,0.4),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_80%_80%,rgba(99,102,241,0.15),transparent)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(126,34,206,0.4),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_80%_80%,rgba(126,34,206,0.15),transparent)]" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
 
         <div className="relative mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-indigo-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-700/10 px-4 py-1.5 text-sm font-medium text-purple-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
             AI-powered short-form video
           </div>
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             Turn long videos into
-            <span className="block bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-              viral short clips
+            <span className="block bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+              AI short clips
+            </span>
+            <span className="block mt-1 text-2xl font-semibold text-slate-300 sm:text-3xl md:text-4xl">
+              for Reels, TikTok & YouTube Shorts
             </span>
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-300 sm:text-xl">
-            Upload once. We transcribe, find the best moments with AI, and deliver
-            ready-to-post 9:16 clips for Reels, TikTok and YouTube Shorts — in minutes.
+            Kllivo is an AI video clip generator that uses topic-aware segmentation to find the best moments
+            in your long-form videos and deliver ready-to-post 9:16 clips for Reels, TikTok, and YouTube
+            Shorts — in minutes.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/upload"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-purple-700/30 transition hover:bg-purple-600 sm:w-auto"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
@@ -228,6 +288,20 @@ export default async function Home({
           <p className="mt-5 text-sm text-slate-400">
             Free to start · No credit card required · Sign in with Google
           </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              100+ languages
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              Topic-aware AI
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              No clip expiry
+            </span>
+          </div>
         </div>
       </section>
 
@@ -236,7 +310,7 @@ export default async function Home({
         <div className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:sm:divide-slate-700">
           {stats.map((s) => (
             <div key={s.label} className="flex flex-col items-center gap-1 px-4 text-center">
-              <span className="text-2xl font-bold text-indigo-600 sm:text-3xl dark:text-indigo-400">{s.value}</span>
+              <span className="text-2xl font-bold text-purple-700 sm:text-3xl dark:text-purple-400">{s.value}</span>
               <span className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">{s.label}</span>
             </div>
           ))}
@@ -246,7 +320,7 @@ export default async function Home({
       {/* ─── Features ─────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-800 dark:bg-purple-950/50 dark:text-purple-300">
             Everything you need
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl dark:text-white">
@@ -260,9 +334,9 @@ export default async function Home({
           {features.map((item, i) => (
             <li
               key={i}
-              className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:border-indigo-200 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-700"
+              className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:border-purple-200 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-800"
             >
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-purple-100 bg-purple-50 text-purple-700 transition group-hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-400">
                 {item.icon}
               </span>
               <h3 className="mt-5 text-base font-semibold text-slate-900 dark:text-white">{item.title}</h3>
@@ -275,7 +349,7 @@ export default async function Home({
       {/* ─── How it works ─────────────────────────────────────────── */}
       <section id="how-it-works" className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-800 dark:bg-purple-950/50 dark:text-purple-300">
             Process
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
@@ -289,7 +363,7 @@ export default async function Home({
           {steps.map((item, i) => (
             <div key={item.step} className="relative flex flex-col rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-700 dark:bg-slate-800">
               <div className="flex items-center gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-700 text-sm font-bold text-white">
                   {i + 1}
                 </span>
                 {i < steps.length - 1 && (
@@ -310,7 +384,7 @@ export default async function Home({
       {/* ─── Use cases ────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-800 dark:bg-purple-950/50 dark:text-purple-300">
             Who it's for
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
@@ -322,7 +396,7 @@ export default async function Home({
         </div>
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {useCases.map((uc) => (
-            <div key={uc.title} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-indigo-200 hover:shadow-sm transition dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-700">
+            <div key={uc.title} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-purple-200 hover:shadow-sm transition dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-800">
               <span className="text-3xl">{uc.icon}</span>
               <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">{uc.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{uc.description}</p>
@@ -336,7 +410,7 @@ export default async function Home({
         <div className="overflow-hidden rounded-3xl bg-slate-900 text-white">
           <div className="grid gap-0 lg:grid-cols-2">
             <div className="px-8 py-12 sm:px-12 sm:py-16">
-              <span className="inline-block rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-300">
+              <span className="inline-block rounded-full bg-purple-700/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-300">
                 Why Kllivo
               </span>
               <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
@@ -350,7 +424,7 @@ export default async function Home({
               </p>
               <Link
                 href="/upload"
-                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-purple-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-700/30 transition hover:bg-purple-600"
               >
                 Try it free
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -367,7 +441,7 @@ export default async function Home({
                   { label: "Multi-language support", desc: "Works with 100+ languages including Hindi, Spanish, French and more." },
                 ].map((item) => (
                   <li key={item.label} className="flex gap-4">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-700/20 text-purple-400">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                       </svg>
@@ -387,7 +461,7 @@ export default async function Home({
       {/* ─── Pricing teaser ───────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-800 dark:bg-purple-950/50 dark:text-purple-300">
             Pricing
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
@@ -434,12 +508,12 @@ export default async function Home({
               key={plan.name}
               className={`relative flex flex-col rounded-2xl border-2 p-6 ${
                 plan.highlight
-                  ? "border-indigo-500 bg-indigo-50/30 shadow-lg dark:bg-indigo-950/20"
+                  ? "border-purple-600 bg-purple-50/30 shadow-lg dark:bg-purple-950/20"
                   : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
               }`}
             >
               {plan.highlight && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-1 text-xs font-semibold text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-purple-700 px-4 py-1 text-xs font-semibold text-white">
                   Most popular
                 </span>
               )}
@@ -452,7 +526,7 @@ export default async function Home({
               <ul className="mt-6 space-y-2">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                    <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="h-4 w-4 shrink-0 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                     {f}
@@ -463,7 +537,7 @@ export default async function Home({
                 href={plan.href}
                 className={`mt-8 block w-full rounded-xl py-3 text-center text-sm font-semibold transition ${
                   plan.highlight
-                    ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                    ? "bg-purple-700 text-white hover:bg-purple-600"
                     : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
@@ -474,7 +548,7 @@ export default async function Home({
         </div>
         <p className="mt-6 text-center text-sm text-slate-500">
           All plans include unlimited clip downloads.{" "}
-          <Link href="/pricing" className="text-indigo-600 underline-offset-2 hover:underline">
+          <Link href="/pricing" className="text-purple-700 underline-offset-2 hover:underline">
             See full pricing →
           </Link>
         </p>
@@ -483,7 +557,7 @@ export default async function Home({
       {/* ─── FAQ ──────────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-3xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-purple-800 dark:bg-purple-950/50 dark:text-purple-300">
             FAQ
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
@@ -499,7 +573,18 @@ export default async function Home({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <dd className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{faq.a}</dd>
+              <dd className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                {faq.q === "What makes Kllivo different from other clipping tools?" ? (
+                  <>
+                    Most tools cut by silence or timestamps. Kllivo analyzes the transcript for topic beats, hook strength, and complete ideas — so every clip starts strong and ends at a natural point.{" "}
+                    <Link href="/compare" className="text-purple-700 underline-offset-2 hover:underline dark:text-purple-400">
+                      See how we compare to Opus Clip, Vizard, and more →
+                    </Link>
+                  </>
+                ) : (
+                  faq.a
+                )}
+              </dd>
             </details>
           ))}
         </dl>
@@ -507,25 +592,25 @@ export default async function Home({
 
       {/* ─── Final CTA ────────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl bg-indigo-600 px-8 py-16 text-center text-white sm:px-12 sm:py-20">
+        <div className="relative overflow-hidden rounded-3xl bg-purple-700 px-8 py-16 text-center text-white sm:px-12 sm:py-20">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(255,255,255,0.15),transparent)]" />
           <div className="relative">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               Start turning your videos into clips today
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-indigo-100">
+            <p className="mx-auto mt-4 max-w-xl text-purple-100">
               Upload your first video and get clip suggestions in minutes. Free to start — no credit card required.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/upload"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 shadow-lg transition hover:bg-indigo-50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-purple-700 shadow-lg transition hover:bg-purple-50 sm:w-auto"
               >
                 Upload your first video
               </Link>
               <Link
                 href="/pricing"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-400/50 bg-indigo-500/30 px-8 py-4 text-base font-semibold text-white transition hover:bg-indigo-500/50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-purple-400/50 bg-purple-600/30 px-8 py-4 text-base font-semibold text-white transition hover:bg-purple-600/50 sm:w-auto"
               >
                 View pricing
               </Link>
@@ -554,6 +639,7 @@ export default async function Home({
                   <li><Link href="/videos" className="text-sm text-slate-400 transition hover:text-white">My videos</Link></li>
                   <li><Link href="/pricing" className="text-sm text-slate-400 transition hover:text-white">Pricing</Link></li>
                   <li><a href="#how-it-works" className="text-sm text-slate-400 transition hover:text-white">How it works</a></li>
+                  <li><Link href="/compare" className="text-sm text-slate-400 transition hover:text-white">Compare</Link></li>
                 </ul>
               </div>
               <div>

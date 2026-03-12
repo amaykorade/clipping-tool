@@ -52,7 +52,7 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
         <div
-          className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-red-500" : "bg-indigo-600"}`}
+          className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-red-500" : "bg-purple-700"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
             <ul className="space-y-2">
               {data.recentVideos.map((v) => (
                 <li key={v.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/videos/${v.id}`} className="truncate text-indigo-600 hover:underline">
+                  <Link href={`/videos/${v.id}`} className="truncate text-purple-700 hover:underline">
                     {v.title}
                   </Link>
                   <span className="ml-2 shrink-0 text-xs text-slate-400">{v.clipCount} clips</span>
@@ -148,10 +148,10 @@ export default function AnalyticsPage() {
             <ul className="space-y-2">
               {data.topClips.map((c) => (
                 <li key={c.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/videos/${c.videoId}`} className="truncate text-indigo-600 hover:underline">
+                  <Link href={`/videos/${c.videoId}`} className="truncate text-purple-700 hover:underline">
                     {c.title}
                   </Link>
-                  <span className="ml-2 shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                  <span className="ml-2 shrink-0 rounded bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
                     {c.confidence != null ? `${(c.confidence * 100).toFixed(0)}%` : "—"}
                   </span>
                 </li>

@@ -108,7 +108,7 @@ export default function MyVideosPage() {
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            className="mt-6 inline-flex rounded-xl bg-purple-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600"
           >
             Back to home
           </Link>
@@ -154,7 +154,7 @@ export default function MyVideosPage() {
           </p>
           <Link
             href="/upload"
-            className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            className="mt-6 inline-flex rounded-xl bg-purple-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600"
           >
             Upload video
           </Link>
@@ -176,7 +176,7 @@ export default function MyVideosPage() {
         </div>
         <Link
           href="/upload"
-          className="inline-flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          className="inline-flex shrink-0 items-center justify-center rounded-xl bg-purple-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600"
         >
           Upload video
         </Link>
@@ -196,12 +196,12 @@ export default function MyVideosPage() {
               if (e.target.value.trim().length < 2) setSearchResults(null);
             }}
             placeholder="Search across all transcripts..."
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-900/30"
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-purple-600 dark:focus:ring-purple-900/30"
           />
           <button
             type="submit"
             disabled={searching || searchQuery.trim().length < 2}
-            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+            className="rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-purple-600 disabled:opacity-50"
           >
             {searching ? "Searching..." : "Search"}
           </button>
@@ -216,7 +216,7 @@ export default function MyVideosPage() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">{searchResults.length} video{searchResults.length !== 1 ? "s" : ""} matched</p>
                 {searchResults.map((r) => (
                   <div key={r.videoId} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-                    <Link href={`/videos/${r.videoId}`} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                    <Link href={`/videos/${r.videoId}`} className="font-medium text-purple-700 hover:underline dark:text-purple-400">
                       {r.title}
                     </Link>
                     <span className="ml-2 text-xs text-slate-400">{r.matchCount} match{r.matchCount !== 1 ? "es" : ""}</span>

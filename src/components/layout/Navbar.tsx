@@ -57,7 +57,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 font-semibold text-slate-900 transition hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
+          className="flex shrink-0 items-center gap-2 font-semibold text-slate-900 transition hover:text-purple-700 dark:text-white dark:hover:text-purple-400"
         >
           <span className="text-xl tracking-tight">Kllivo</span>
         </Link>
@@ -70,7 +70,7 @@ export default function Navbar() {
               href={link.href}
               className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive(link.href)
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                  ? "bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
               }`}
             >
@@ -101,7 +101,7 @@ export default function Navbar() {
                     className="h-9 w-9 rounded-full"
                   />
                 ) : (
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-sm font-medium text-purple-800 dark:bg-purple-950 dark:text-purple-300">
                     {(session.user.name ?? session.user.email ?? "?")[0]}
                   </span>
                 )}
@@ -121,7 +121,7 @@ export default function Navbar() {
                       </p>
                     )}
                     {planLabel && (
-                      <p className="mt-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                      <p className="mt-1 text-xs font-medium text-purple-700 dark:text-purple-400">
                         {planLabel} plan
                       </p>
                     )}
@@ -161,7 +161,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => signIn("google")}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600"
             >
               <GoogleIcon />
               Sign in with Google
@@ -200,7 +200,7 @@ export default function Navbar() {
                 onClick={() => setMobileOpen(false)}
                 className={`rounded-lg px-3 py-2.5 text-sm font-medium ${
                   isActive(link.href)
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                    ? "bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
                     : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 }`}
               >
@@ -224,13 +224,13 @@ export default function Navbar() {
                     {session.user.image ? (
                       <img src={session.user.image} alt="" className="h-10 w-10 rounded-full" />
                     ) : (
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-sm font-medium text-purple-800 dark:bg-purple-950 dark:text-purple-300">
                         {(session.user.name ?? session.user.email ?? "?")[0]}
                       </span>
                     )}
                     <div className="text-left">
                       <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{session.user.name ?? "Account"}</p>
-                      {planLabel && <p className="text-xs text-indigo-600 dark:text-indigo-400">{planLabel} plan</p>}
+                      {planLabel && <p className="text-xs text-purple-700 dark:text-purple-400">{planLabel} plan</p>}
                     </div>
                     <svg
                       className={`ml-auto h-4 w-4 text-slate-400 transition ${mobileAccountOpen ? "rotate-180" : ""}`}
@@ -266,7 +266,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => { signIn("google"); setMobileOpen(false); }}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-700 py-3 text-sm font-semibold text-white"
                 >
                   <GoogleIcon />
                   Sign in with Google

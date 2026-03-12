@@ -8,12 +8,12 @@ const STATUS_CONFIG: Record<string, { label: string; style: string; icon: React.
   },
   TRANSCRIBING: {
     label: "Transcribing",
-    style: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    style: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
     icon: <SpinnerIcon />,
   },
   ANALYZING: {
     label: "Analyzing",
-    style: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    style: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
     icon: <SearchIcon />,
   },
   READY: {
@@ -28,7 +28,7 @@ const STATUS_CONFIG: Record<string, { label: string; style: string; icon: React.
   },
   PROCESSING: {
     label: "Rendering",
-    style: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    style: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
     icon: <SpinnerIcon />,
   },
   COMPLETED: {

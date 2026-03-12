@@ -166,7 +166,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Episode 12 — Product launch"
-              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-500 dark:disabled:bg-slate-800"
+              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/20 disabled:bg-slate-50 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-500 dark:disabled:bg-slate-800"
               disabled={uploading}
             />
           </div>
@@ -195,7 +195,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
               onKeyDown={(e) => e.key === "Enter" && openFileDialog()}
               className={`mt-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition sm:py-12 ${
                 dragActive
-                  ? "border-indigo-400 bg-indigo-50/50"
+                  ? "border-purple-500 bg-purple-50/50"
                   : file
                     ? "border-slate-200 bg-slate-50/50"
                     : "border-slate-200 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50"
@@ -207,8 +207,8 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
             >
               {file ? (
                 <div className="flex flex-col items-center gap-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
-                    <UploadIcon className="h-6 w-6 text-indigo-600" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                    <UploadIcon className="h-6 w-6 text-purple-700" />
                   </div>
                   <p className="font-medium text-slate-900 dark:text-white">{file.name}</p>
                   <p className="text-sm text-slate-500">
@@ -259,7 +259,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-indigo-600 transition-all duration-300 ease-out"
+                  className="h-full rounded-full bg-purple-700 transition-all duration-300 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -269,7 +269,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
           <button
             type="submit"
             disabled={uploading || !file || !title}
-            className="w-full rounded-xl bg-indigo-600 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            className="w-full rounded-xl bg-purple-700 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {uploading ? "Uploading…" : "Upload video"}
           </button>

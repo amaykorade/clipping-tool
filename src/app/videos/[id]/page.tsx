@@ -273,19 +273,19 @@ export default function VideoDetailPage({
       )}
 
       {isProcessing && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 px-5 py-4 dark:border-indigo-700/50 dark:bg-indigo-950/40">
-          <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+        <div className="rounded-xl border border-purple-200 bg-purple-50/80 px-5 py-4 dark:border-purple-700/50 dark:bg-purple-950/40">
+          <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
             We&apos;re processing your video. Clips will appear here in a few minutes.
           </p>
-          <p className="mt-1 text-sm text-indigo-700/90 dark:text-indigo-400">
+          <p className="mt-1 text-sm text-purple-800/90 dark:text-purple-400">
             You can leave this page. Status updates every few seconds.
           </p>
           {video?.transcribeProgress != null && video.transcribeProgress >= 0 && video.transcribeProgress < 100 && (
             <div className="mt-3">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-indigo-200 dark:bg-indigo-800">
-                <div className="h-full bg-indigo-600 transition-all duration-500 dark:bg-indigo-400" style={{ width: `${video.transcribeProgress}%` }} />
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-purple-200 dark:bg-purple-800">
+                <div className="h-full bg-purple-700 transition-all duration-500 dark:bg-purple-400" style={{ width: `${video.transcribeProgress}%` }} />
               </div>
-              <p className="mt-1.5 text-xs text-indigo-700/80 dark:text-indigo-400">{video.transcribeProgress}% complete</p>
+              <p className="mt-1.5 text-xs text-purple-800/80 dark:text-purple-400">{video.transcribeProgress}% complete</p>
             </div>
           )}
         </div>
@@ -309,7 +309,7 @@ export default function VideoDetailPage({
             <button
               onClick={handleGenerateClips}
               disabled={loading || video?.status !== "READY"}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-purple-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Generating..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
             </button>
@@ -332,7 +332,7 @@ export default function VideoDetailPage({
               onClick={() => setSpeakerFilter(null)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                 speakerFilter === null
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-purple-700 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
               }`}
             >
@@ -344,7 +344,7 @@ export default function VideoDetailPage({
                 onClick={() => setSpeakerFilter(s === speakerFilter ? null : s)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                   speakerFilter === s
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-purple-700 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                 }`}
               >
@@ -377,7 +377,7 @@ export default function VideoDetailPage({
                 <a
                   href={`/api/videos/${id}/download-clips`}
                   download
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
                 >
                   <DownloadIcon className="h-3.5 w-3.5" />
                   Download all
@@ -391,7 +391,7 @@ export default function VideoDetailPage({
                     tabIndex={0}
                     onClick={() => setSelectedClipId(c.id)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedClipId(c.id); } }}
-                    className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500"
+                    className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg hover:border-purple-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-600"
                   >
                     <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-900">
                       {c.thumbnailUrl ? (
@@ -425,7 +425,7 @@ export default function VideoDetailPage({
                           </span>
                         )}
                         {c.speaker && (
-                          <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                          <span className="rounded-md bg-purple-700/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                             S{c.speaker}
                           </span>
                         )}
@@ -495,7 +495,7 @@ export default function VideoDetailPage({
                 {pendingClips.some((c) => c.status === "PENDING") && (
                   <button
                     onClick={handleRenderAll}
-                    className="text-sm font-medium text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                    className="text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
                   >
                     Render all
                   </button>
@@ -510,11 +510,11 @@ export default function VideoDetailPage({
                     <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50">
                       {c.status === "PROCESSING" ? (
                         <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
-                          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-indigo-200 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400" />
+                          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-purple-200 border-t-purple-700 dark:border-purple-800 dark:border-t-purple-400" />
                           {c.renderProgress != null && c.renderProgress > 0 ? (
                             <div className="w-full max-w-[8rem]">
                               <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-600">
-                                <div className="h-full rounded-full bg-indigo-600 transition-all duration-500 dark:bg-indigo-400" style={{ width: `${c.renderProgress}%` }} />
+                                <div className="h-full rounded-full bg-purple-700 transition-all duration-500 dark:bg-purple-400" style={{ width: `${c.renderProgress}%` }} />
                               </div>
                               <p className="mt-1.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{c.renderProgress}%</p>
                             </div>
@@ -529,7 +529,7 @@ export default function VideoDetailPage({
                           </div>
                           <button
                             onClick={() => handleRenderClip(c.id)}
-                            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                            className="rounded-lg bg-purple-700 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-purple-600"
                           >
                             Render clip
                           </button>
@@ -543,7 +543,7 @@ export default function VideoDetailPage({
                           </span>
                         )}
                         {c.speaker && (
-                          <span className="rounded-md bg-indigo-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                          <span className="rounded-md bg-purple-700/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                             S{c.speaker}
                           </span>
                         )}
@@ -615,7 +615,7 @@ export default function VideoDetailPage({
                 {videoErrors[selectedClip.id] && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/90 p-4 text-center text-sm text-white">
                     <span>Video could not load.</span>
-                    <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-400 underline">
+                    <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium text-purple-400 underline">
                       Open in new tab
                     </a>
                   </div>
@@ -638,7 +638,7 @@ export default function VideoDetailPage({
                   <a
                     href={`/api/clips/${selectedClip.id}/download`}
                     download
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600"
                   >
                     <DownloadIcon className="h-4 w-4" />
                     Download

@@ -108,7 +108,7 @@ export default async function AccountPage({
             <span
               className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
                 user.plan === "PRO"
-                  ? "bg-indigo-100 text-indigo-800"
+                  ? "bg-purple-100 text-purple-900"
                   : user.plan === "STARTER"
                     ? "bg-slate-200 text-slate-800"
                     : "bg-slate-100 text-slate-600"
@@ -171,7 +171,7 @@ export default async function AccountPage({
                 </p>
                 <Link
                   href="/pricing"
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-600"
                 >
                   View plans
                 </Link>
