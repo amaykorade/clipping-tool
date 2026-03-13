@@ -219,6 +219,7 @@ model WebhookEvent {
 // Enums
 
 enum VideoStatus {
+  DOWNLOADING
   UPLOADED
   TRANSCRIBING
   ANALYZING
@@ -240,6 +241,7 @@ enum AspectRatio{
 }
 
 enum JobType {
+  DOWNLOAD
   TRANSCRIBE
   ANALYZE
   GENERATE_CLIP

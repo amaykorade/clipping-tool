@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "JobType" ADD VALUE 'DOWNLOAD';
+
+-- AlterEnum
+ALTER TYPE "VideoStatus" ADD VALUE 'DOWNLOADING';

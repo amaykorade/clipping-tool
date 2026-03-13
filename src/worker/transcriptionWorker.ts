@@ -7,9 +7,11 @@ import {
 import { prisma } from "@/lib/db";
 import { TRANSCRIBE_QUEUE_NAME, RENDER_QUEUE_NAME, VideoJobData } from "@/lib/queue";
 import { getStorage } from "@/lib/storage";
+import { getPlanLimits } from "@/lib/plans";
 import { finalizePendingUpload } from "@/lib/video/upload";
 import { renderAndUploadClip } from "@/lib/video/clipRenderer";
 import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTranscript";
+import { downloadYouTubeVideo } from "@/lib/video/youtube";
 import { sendVideoReadyEmail, sendClipsRenderedEmail } from "@/lib/email";
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
@@ -34,6 +36,88 @@ async function handleVideoJob(job: Job<VideoJobData>) {
   console.log(
     `[Worker] Processing job ${job.id} type=${type} videoId=${videoId} clipId=${clipId}`,
   );
+
+  if (type === JobType.DOWNLOAD) {
+    if (!videoId) throw new Error("videoId required for DOWNLOAD job");
+
+    const dbJob = await prisma.job.update({
+      where: { id: job.id as string },
+      data: { status: JobStatus.RUNNING, startedAt: new Date() },
+    });
+
+    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new Error(`Video ${videoId} not found`);
+    if (!video.originalUrl) throw new Error(`Video ${videoId} has no originalUrl`);
+
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: VideoStatus.DOWNLOADING },
+    });
+
+    const tmpPath = `/tmp/yt-${videoId}.mp4`;
+    try {
+      // Download YouTube video (0-60% of job progress)
+      const { fileSize } = await downloadYouTubeVideo(
+        video.originalUrl,
+        tmpPath,
+        async (pct) => {
+          const overall = Math.round(pct * 0.6);
+          await job.updateProgress(overall);
+        },
+      );
+      await job.updateProgress(65);
+
+      // Upload to pending storage
+      const pendingKey = `pending/${videoId}.mp4`;
+      const storage = getStorage();
+      const fs = await import("fs/promises");
+      const fileBuffer = await fs.readFile(tmpPath);
+      await storage.upload(fileBuffer, pendingKey, { contentType: "video/mp4", fileSize });
+      await job.updateProgress(80);
+
+      // Update video record
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { storageKey: pendingKey, fileSize, status: VideoStatus.UPLOADED },
+      });
+
+      // Mark download job completed
+      await prisma.job.update({
+        where: { id: dbJob.id },
+        data: { status: JobStatus.COMPLETED, progress: 100, completedAt: new Date() },
+      });
+      await job.updateProgress(100);
+
+      // Chain: enqueue TRANSCRIBE job
+      const userForPriority = video.userId
+        ? await prisma.user.findUnique({ where: { id: video.userId }, select: { plan: true } })
+        : null;
+      const priority = userForPriority ? getPlanLimits(userForPriority.plan).jobPriority : 3;
+
+      const transcribeJob = await prisma.job.create({
+        data: {
+          type: JobType.TRANSCRIBE,
+          status: JobStatus.QUEUED,
+          videoId,
+          progress: 0,
+          maxRetries: 3,
+        },
+      });
+
+      const { videoQueue } = await import("@/lib/queue");
+      await videoQueue.add(
+        "transcribe",
+        { type: JobType.TRANSCRIBE, videoId },
+        { jobId: transcribeJob.id, priority },
+      );
+
+      console.log(`[Worker] YouTube download completed for video ${videoId} (${Math.round(fileSize / 1024 / 1024)}MB), transcribe job queued`);
+      return { videoId };
+    } finally {
+      const fs = await import("fs/promises");
+      fs.unlink(tmpPath).catch(() => {});
+    }
+  }
 
   if (type === JobType.TRANSCRIBE) {
     if (!videoId) throw new Error("videoId required for TRANSCRIBE job");
@@ -137,12 +221,22 @@ async function handleVideoJob(job: Job<VideoJobData>) {
 
     // Generate clip suggestions (9:16 for Insta Reels, TikTok, YT Shorts).
     // Rendering is on-demand: user clicks "Create video files" or "Render clip" to queue jobs.
+    // Download video to temp file for audio energy analysis during clip scoring.
+    const tmpVideoPath = `/tmp/${videoId}-original.mp4`;
     try {
-      const clips = await generateClipsFromTranscript(videoId, { maxClips: 10 });
+      await storage.downloadToFile(video.storageKey, tmpVideoPath);
+      const clips = await generateClipsFromTranscript(videoId, {
+        maxClips: 10,
+        videoFilePath: tmpVideoPath,
+      });
       console.log(`[Worker] Generated ${clips.length} clips for video ${videoId} (render on demand)`);
     } catch (clipErr) {
       console.error(`[Worker] Clip generation failed for video ${videoId}:`, clipErr);
       // Don't fail the transcription job; clips can be generated manually later
+    } finally {
+      // Clean up temp file
+      const fs = await import("fs/promises");
+      fs.unlink(tmpVideoPath).catch(() => {});
     }
 
     // Send email notification

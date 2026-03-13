@@ -66,6 +66,20 @@ function DownloadIcon({ className }: { className?: string }) {
   );
 }
 
+const FORMAT_OPTIONS = [
+  { id: "tiktok", label: "TikTok", ratio: "9:16", aspect: "aspect-[9/16]" },
+  { id: "instagram-reels", label: "Reels", ratio: "9:16", aspect: "aspect-[9/16]" },
+  { id: "youtube-shorts", label: "Shorts", ratio: "9:16", aspect: "aspect-[9/16]" },
+  { id: "twitter", label: "Twitter / X", ratio: "16:9", aspect: "aspect-[16/9]" },
+  { id: "linkedin", label: "LinkedIn", ratio: "1:1", aspect: "aspect-square" },
+] as const;
+
+function getAspectClass(ratio: string | undefined): string {
+  if (ratio === "16:9" || ratio === "LANDSCAPE") return "aspect-[16/9]";
+  if (ratio === "1:1" || ratio === "SQUARE") return "aspect-square";
+  return "aspect-[9/16]";
+}
+
 interface Clip {
   id: string;
   title: string;
@@ -78,6 +92,7 @@ interface Clip {
   renderProgress?: number | null;
   speaker?: string | null;
   feedback?: string | null;
+  aspectRatio?: string | null;
 }
 
 export default function VideoDetailPage({
@@ -101,6 +116,7 @@ export default function VideoDetailPage({
   const [showTranscript, setShowTranscript] = useState(false);
   const [speakerFilter, setSpeakerFilter] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<typeof FORMAT_OPTIONS[number]>(FORMAT_OPTIONS[0]);
   type TranscriptData = {
     transcript: {
       words: { text: string; start: number; end: number }[];
@@ -136,7 +152,7 @@ export default function VideoDetailPage({
   const shouldPoll =
     video &&
     video.status !== "ERROR" &&
-    (video.status === "UPLOADED" || video.status === "TRANSCRIBING" || (video.status === "READY" && hasRenderingClips));
+    (video.status === "DOWNLOADING" || video.status === "UPLOADED" || video.status === "TRANSCRIBING" || (video.status === "READY" && hasRenderingClips));
 
   useEffect(() => {
     if (!shouldPoll) return;
@@ -202,11 +218,15 @@ export default function VideoDetailPage({
 
   const handleRenderClip = async (clipId: string) => {
     try {
-      const res = await fetch(`/api/clips/${clipId}/render`, { method: "POST" });
+      const res = await fetch(`/api/clips/${clipId}/render`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ presetId: selectedFormat.id }),
+      });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error || "Render request failed");
-      showToast("success", "Rendering started. This clip will be ready in a few minutes.");
+      showToast("success", `Rendering for ${selectedFormat.label} started. Ready in a few minutes.`);
       await refreshClips();
     } catch (e) {
       showToast("error", (e as Error).message);
@@ -215,11 +235,17 @@ export default function VideoDetailPage({
 
   const handleRenderAll = async () => {
     try {
-      const res = await fetch(`/api/videos/${id}/render-all-clips`, { method: "POST" });
+      const res = await fetch(`/api/videos/${id}/render-all-clips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ presetId: selectedFormat.id }),
+      });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error || "Render request failed");
-      showToast("success", `${data.count} clip${data.count === 1 ? "" : "s"} queued for rendering.`);
+      let msg = `${data.count} clip${data.count === 1 ? "" : "s"} queued for ${selectedFormat.label}.`;
+      if (data.skipped) msg += ` ${data.skipped} skipped (too long).`;
+      showToast("success", msg);
       await refreshClips();
     } catch (e) {
       showToast("error", (e as Error).message);
@@ -247,7 +273,7 @@ export default function VideoDetailPage({
 
   if (loadingVideo) return <VideoDetailSkeleton />;
 
-  const isProcessing = video?.status === "UPLOADED" || video?.status === "TRANSCRIBING" || video?.status === "ANALYZING";
+  const isProcessing = video?.status === "DOWNLOADING" || video?.status === "UPLOADED" || video?.status === "TRANSCRIBING" || video?.status === "ANALYZING";
   const videoTitle = video?.title ?? "Video";
   const speakers = [...new Set(clips.map((c) => c.speaker).filter(Boolean))] as string[];
   const filteredClips = clips.filter((c) => !speakerFilter || c.speaker === speakerFilter);
@@ -275,7 +301,9 @@ export default function VideoDetailPage({
       {isProcessing && (
         <div className="rounded-xl border border-purple-200 bg-purple-50/80 px-5 py-4 dark:border-purple-700/50 dark:bg-purple-950/40">
           <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
-            We&apos;re processing your video. Clips will appear here in a few minutes.
+            {video?.status === "DOWNLOADING"
+              ? "Downloading your video from YouTube…"
+              : "We're processing your video. Clips will appear here in a few minutes."}
           </p>
           <p className="mt-1 text-sm text-purple-800/90 dark:text-purple-400">
             You can leave this page. Status updates every few seconds.
@@ -353,6 +381,35 @@ export default function VideoDetailPage({
             ))}
           </div>
         )}
+        {/* Format / platform selector */}
+        {clips.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Export format</p>
+            <div className="flex flex-wrap gap-1.5">
+              {FORMAT_OPTIONS.map((fmt) => (
+                <button
+                  key={fmt.id}
+                  onClick={() => setSelectedFormat(fmt)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    selectedFormat.id === fmt.id
+                      ? "bg-purple-700 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                  }`}
+                >
+                  <span className={`inline-block rounded-sm border ${
+                    selectedFormat.id === fmt.id ? "border-purple-400" : "border-slate-300 dark:border-slate-500"
+                  } ${
+                    fmt.ratio === "9:16" ? "h-3.5 w-2" : fmt.ratio === "1:1" ? "h-3 w-3" : "h-2 w-3.5"
+                  }`} />
+                  {fmt.label}
+                  <span className={`text-[10px] ${selectedFormat.id === fmt.id ? "text-purple-200" : "text-slate-400 dark:text-slate-500"}`}>
+                    {fmt.ratio}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {error && (
@@ -374,14 +431,23 @@ export default function VideoDetailPage({
                     {readyClips.length}
                   </span>
                 </div>
-                <a
-                  href={`/api/videos/${id}/download-clips`}
-                  download
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
-                >
-                  <DownloadIcon className="h-3.5 w-3.5" />
-                  Download all
-                </a>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRenderAll}
+                    className="text-xs font-medium text-slate-500 transition hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400"
+                    title={`Re-render all clips as ${selectedFormat.label} (${selectedFormat.ratio})`}
+                  >
+                    Re-render as {selectedFormat.label}
+                  </button>
+                  <a
+                    href={`/api/videos/${id}/download-clips`}
+                    download
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
+                  >
+                    <DownloadIcon className="h-3.5 w-3.5" />
+                    Download all
+                  </a>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {readyClips.map((c) => (
@@ -393,7 +459,7 @@ export default function VideoDetailPage({
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedClipId(c.id); } }}
                     className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg hover:border-purple-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-600"
                   >
-                    <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-900">
+                    <div className={`relative ${getAspectClass(c.aspectRatio ?? undefined)} w-full overflow-hidden bg-slate-900`}>
                       {c.thumbnailUrl ? (
                         <img
                           src={toSameOriginUrl(c.thumbnailUrl)}
@@ -419,11 +485,18 @@ export default function VideoDetailPage({
                       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
                       {/* Overlaid badges */}
                       <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
-                        {c.confidence != null && (
-                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                            {(c.confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {c.confidence != null && (
+                            <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                              {(c.confidence * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {c.aspectRatio && c.aspectRatio !== "VERTICAL" && (
+                            <span className="rounded-md bg-purple-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                              {c.aspectRatio === "SQUARE" ? "1:1" : c.aspectRatio === "LANDSCAPE" ? "16:9" : "9:16"}
+                            </span>
+                          )}
+                        </div>
                         {c.speaker && (
                           <span className="rounded-md bg-purple-700/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                             S{c.speaker}
@@ -495,9 +568,10 @@ export default function VideoDetailPage({
                 {pendingClips.some((c) => c.status === "PENDING") && (
                   <button
                     onClick={handleRenderAll}
-                    className="text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 transition hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
                   >
-                    Render all
+                    Render all as {selectedFormat.label}
+                    <span className="text-[10px] text-purple-500 dark:text-purple-500">({selectedFormat.ratio})</span>
                   </button>
                 )}
               </div>
@@ -507,7 +581,7 @@ export default function VideoDetailPage({
                     key={c.id}
                     className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
                   >
-                    <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50">
+                    <div className={`relative ${c.status === "PROCESSING" ? getAspectClass(c.aspectRatio ?? undefined) : selectedFormat.aspect} w-full overflow-hidden bg-slate-100 dark:bg-slate-700/50 transition-all duration-300`}>
                       {c.status === "PROCESSING" ? (
                         <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
                           <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-purple-200 border-t-purple-700 dark:border-purple-800 dark:border-t-purple-400" />
@@ -531,7 +605,7 @@ export default function VideoDetailPage({
                             onClick={() => handleRenderClip(c.id)}
                             className="rounded-lg bg-purple-700 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-purple-600"
                           >
-                            Render clip
+                            Render for {selectedFormat.label}
                           </button>
                         </div>
                       )}
@@ -584,7 +658,9 @@ export default function VideoDetailPage({
           <div
             role="dialog"
             aria-modal="true"
-            className="relative mx-4 flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800"
+            className={`relative mx-4 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800 ${
+              selectedClip.aspectRatio === "LANDSCAPE" ? "max-w-2xl" : selectedClip.aspectRatio === "SQUARE" ? "max-w-md" : "max-w-sm"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button — floating */}
@@ -608,7 +684,7 @@ export default function VideoDetailPage({
                   autoPlay
                   preload="metadata"
                   playsInline
-                  className="aspect-[9/16] w-full object-contain"
+                  className={`${getAspectClass(selectedClip.aspectRatio ?? undefined)} w-full object-contain`}
                   onError={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: true }))}
                   onLoadedData={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: false }))}
                 />
@@ -630,6 +706,9 @@ export default function VideoDetailPage({
                     <span>{selectedClip.startTime.toFixed(1)}s – {selectedClip.endTime.toFixed(1)}s</span>
                     {selectedClip.confidence != null && <span>{(selectedClip.confidence * 100).toFixed(0)}% match</span>}
                     {selectedClip.speaker && <span>Speaker {selectedClip.speaker}</span>}
+                    {selectedClip.aspectRatio && (
+                      <span>{selectedClip.aspectRatio === "VERTICAL" ? "9:16" : selectedClip.aspectRatio === "SQUARE" ? "1:1" : "16:9"}</span>
+                    )}
                   </div>
                 </div>
 

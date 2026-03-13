@@ -1,6 +1,11 @@
 "use client";
 
 const STATUS_CONFIG: Record<string, { label: string; style: string; icon: React.ReactNode }> = {
+  DOWNLOADING: {
+    label: "Downloading",
+    style: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    icon: <SpinnerIcon />,
+  },
   UPLOADED: {
     label: "Uploaded",
     style: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",

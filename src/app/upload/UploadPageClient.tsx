@@ -17,8 +17,8 @@ export default function UploadPageClient() {
           Upload video
         </h1>
         <p className="mt-2 text-slate-600 dark:text-slate-400">
-          Add a long-form video. We’ll transcribe it, find the best moments, and generate
-          ready-to-post clips for Reels, TikTok and Shorts.
+          Upload a video or import from YouTube. We’ll transcribe it, find the best moments,
+          and generate ready-to-post clips for Reels, TikTok and Shorts.
         </p>
       </header>
 
