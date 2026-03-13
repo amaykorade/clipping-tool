@@ -60,9 +60,19 @@ export const KLLIVO_HUB_FEATURES = {
         "Every clip ends at a natural punctuation point. No awkward mid-sentence endings, no incomplete thoughts.",
     },
     {
-      title: "Hook & payoff scoring",
+      title: "Multi-dimensional AI scoring",
       description:
-        "GPT-4o-mini evaluates each segment for how strong the opening is and whether it ends with a satisfying payoff — so you get clips that hold attention.",
+        "GPT-4.1-mini evaluates each clip across four dimensions: hook strength, payoff quality, middle pacing, and audio energy. Clips are then ranked head-to-head via comparative LLM ranking for optimal ordering.",
+    },
+    {
+      title: "YouTube URL import",
+      description:
+        "Paste a YouTube link and get clips — no download or upload needed. We fetch the video, transcribe it, and generate clips automatically.",
+    },
+    {
+      title: "Multiple aspect ratios",
+      description:
+        "Export clips in 9:16 (Reels, TikTok, Shorts), 1:1 (Instagram feed), 16:9 (YouTube), or 4:5 (LinkedIn, Twitter) with platform-specific presets.",
     },
     {
       title: "100+ languages",
@@ -118,8 +128,18 @@ export const HUB_FEATURE_ROWS: HubFeatureRow[] = [
   },
   {
     name: "Hook & payoff scoring",
-    kllivo: "Yes (GPT-4o-mini)",
+    kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)",
     values: { "opus-clip": "Virality Score", vizard: "Virality score", klap: "Virality score", "vidyo-ai": "Virality score", descript: "Implicit ranking", kapwing: "Implicit ranking", getmunch: "Munch Score" },
+  },
+  {
+    name: "Audio energy detection",
+    kllivo: "Yes",
+    values: { "opus-clip": "No", vizard: "No", klap: "No", "vidyo-ai": "No", descript: "No", kapwing: "No", getmunch: "No" },
+  },
+  {
+    name: "Comparative clip ranking",
+    kllivo: "Yes (head-to-head LLM)",
+    values: { "opus-clip": "No", vizard: "No", klap: "No", "vidyo-ai": "No", descript: "No", kapwing: "No", getmunch: "No" },
   },
   {
     name: "Languages supported",
@@ -133,12 +153,12 @@ export const HUB_FEATURE_ROWS: HubFeatureRow[] = [
   },
   {
     name: "Aspect ratios",
-    kllivo: "9:16",
+    kllivo: "9:16, 1:1, 16:9, 4:5",
     values: { "opus-clip": "9:16, 1:1, 16:9", vizard: "9:16, 1:1, 16:9+", klap: "9:16, 1:1", "vidyo-ai": "9:16, 1:1, 16:9, 4:5", descript: "9:16, 1:1, 16:9", kapwing: "9:16, 1:1, 16:9+", getmunch: "9:16, 1:1, 16:9" },
   },
   {
     name: "YouTube URL import",
-    kllivo: "No",
+    kllivo: "Yes",
     values: { "opus-clip": "Yes (Pro)", vizard: "Yes", klap: "Yes", "vidyo-ai": "Yes", descript: "No", kapwing: "Yes", getmunch: "Yes" },
   },
   {
@@ -214,13 +234,15 @@ export const COMPETITORS: Competitor[] = [
     pricingNote: "Credit-based system. Pro is $14.50/mo billed annually.",
     features: [
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "ClipAnything (any genre)" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Virality Score" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Virality Score" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Segmentation approach", kllivo: "Topic boundary detection", competitor: "Timestamp / silence-based" },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages", kllivo: "100+", competitor: "25+" },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles + custom fonts" },
-      { name: "Aspect ratios", kllivo: "9:16", competitor: "9:16, 1:1, 16:9" },
-      { name: "YouTube URL import", kllivo: false, competitor: true },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9" },
+      { name: "YouTube URL import", kllivo: true, competitor: true },
       { name: "Direct social publishing", kllivo: false, competitor: "YouTube, TikTok, IG Reels" },
       { name: "Social media scheduler", kllivo: false, competitor: true },
       { name: "AI B-Roll", kllivo: false, competitor: "AI-generated + stock" },
@@ -235,9 +257,12 @@ export const COMPETITORS: Competitor[] = [
     kllivoAdvantages: [
       "Topic-aware semantic segmentation ensures each clip covers one complete idea — Opus Clip cuts by timestamps and silence",
       "Sentence-boundary cuts mean clips never end mid-sentence",
+      "Multi-dimensional scoring: hook, payoff, pace, and audio energy detection — Opus Clip uses a single virality score",
+      "Comparative LLM ranking orders clips by head-to-head comparison, not just absolute scores",
       "100+ languages vs Opus Clip's 25+ — best-in-class multilingual support",
+      "YouTube URL import — paste a link and get clips, just like Opus Clip",
+      "Multiple aspect ratios (9:16, 1:1, 16:9, 4:5) with platform presets",
       "Free clips never expire — Opus Clip deletes free clips after 3 days",
-      "Self-hostable storage for privacy-conscious users",
     ],
     metaTitle: "Kllivo vs Opus Clip: Best AI Video Clipper Compared (2026)",
     metaDescription: "Detailed comparison of Kllivo and Opus Clip. See how topic-aware segmentation, 100+ languages, and sentence-boundary cuts compare to the market leader.",
@@ -245,10 +270,10 @@ export const COMPETITORS: Competitor[] = [
 
 However, Opus Clip's approach to clip detection relies on timestamps, silence gaps, and basic engagement signals. It does not analyze the semantic structure of your content — meaning clips can mix topics, cut mid-thought, or end abruptly.
 
-Kllivo takes a fundamentally different approach. It uses topic-aware semantic segmentation to detect where ideas change in your transcript, then scores each segment for hook strength and payoff using GPT-4o-mini. Every clip is guaranteed to end at a sentence boundary, so you never get awkward mid-sentence cuts. With 100+ language support (vs Opus Clip's 25+), Kllivo is also the stronger choice for multilingual content. And unlike Opus Clip's free plan where clips expire after 3 days, Kllivo clips never expire.
+Kllivo takes a fundamentally different approach. It uses topic-aware semantic segmentation to detect where ideas change in your transcript, then scores each segment across multiple dimensions — hook strength, payoff quality, pacing, and audio energy — using GPT-4.1-mini. Clips are then ranked head-to-head via comparative LLM ranking for better ordering than absolute scores alone. Every clip is guaranteed to end at a sentence boundary. Kllivo also supports YouTube URL import, multiple aspect ratios (9:16, 1:1, 16:9, 4:5) with platform presets, and 100+ languages (vs Opus Clip's 25+). Unlike Opus Clip's free plan where clips expire after 3 days, Kllivo clips never expire.
 
-The trade-off is clear: Opus Clip has more features (editor, publishing, B-Roll). Kllivo produces smarter clips. If clip quality matters more than editing bells and whistles, Kllivo is the better choice.`,
-    verdict: `Choose Kllivo if you want clips that respect topic boundaries, never cut mid-sentence, and work in 100+ languages. Choose Opus Clip if you need an all-in-one suite with social publishing, B-Roll, and a built-in editor.`,
+The trade-off is clear: Opus Clip has more features (editor, publishing, B-Roll). Kllivo produces smarter clips with deeper AI analysis. If clip quality matters more than editing bells and whistles, Kllivo is the better choice.`,
+    verdict: `Choose Kllivo if you want clips that respect topic boundaries, never cut mid-sentence, and work in 100+ languages with YouTube import. Choose Opus Clip if you need an all-in-one suite with social publishing, B-Roll, and a built-in editor.`,
     faqs: [
       { q: "Is Kllivo better than Opus Clip?", a: "It depends on your priority. Kllivo produces higher-quality clips through semantic segmentation and sentence-boundary cuts. Opus Clip offers more features like social publishing, B-Roll, and a built-in editor. For clip quality and multilingual support, Kllivo wins. For an all-in-one repurposing suite, Opus Clip has more features." },
       { q: "Is Opus Clip free?", a: "Opus Clip has a free plan with 60 credits per month, but free clips expire after 3 days and include a watermark. Kllivo also has a free plan (1 video per month) but clips never expire." },
@@ -267,12 +292,14 @@ The trade-off is clear: Opus Clip has more features (editor, publishing, B-Roll)
     proPrice: 30,
     features: [
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "Engagement-based detection" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Virality score (0-100)" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Virality score (0-100)" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages", kllivo: "100+", competitor: "20-30" },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles (karaoke, word-by-word)" },
-      { name: "Aspect ratios", kllivo: "9:16", competitor: "9:16, 1:1, 16:9, custom" },
-      { name: "YouTube URL import", kllivo: false, competitor: true },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9, custom" },
+      { name: "YouTube URL import", kllivo: true, competitor: true },
       { name: "Direct social publishing", kllivo: false, competitor: "TikTok, YouTube, IG, LinkedIn, X" },
       { name: "Social scheduling", kllivo: false, competitor: true },
       { name: "Brand kit", kllivo: "Custom watermark (Pro)", competitor: "Full brand kit (colors, logos, fonts)" },
@@ -284,9 +311,10 @@ The trade-off is clear: Opus Clip has more features (editor, publishing, B-Roll)
     ],
     kllivoAdvantages: [
       "Topic-aware segmentation produces clips about one complete idea, not random highlights",
+      "Multi-dimensional scoring: hook, payoff, pace + audio energy detection vs single virality score",
       "Sentence-boundary cuts — no mid-sentence endings",
       "100+ languages vs Vizard's 20-30",
-      "Transparent AI pipeline (AssemblyAI + GPT-4o-mini) vs black-box scoring",
+      "YouTube URL import and multiple aspect ratios now match Vizard's workflow",
       "Self-hostable storage for privacy control",
     ],
     metaTitle: "Kllivo vs Vizard AI: Which AI Video Clipper is Better? (2026)",
@@ -295,7 +323,7 @@ The trade-off is clear: Opus Clip has more features (editor, publishing, B-Roll)
 
 Vizard detects clips using engagement-based signals and assigns a virality score from 0 to 100. While useful, this approach doesn't understand the semantic structure of your content — clips may span multiple topics or end in the middle of a thought.
 
-Kllivo's approach is different. It analyzes the transcript for topic boundaries, detects where ideas change, and ensures every clip covers a single complete thought. GPT-4o-mini then scores each segment for hook strength and payoff quality. With 100+ languages (vs Vizard's 20-30), Kllivo is significantly stronger for multilingual creators.
+Kllivo's approach is different. It analyzes the transcript for topic boundaries, detects where ideas change, and ensures every clip covers a single complete thought. GPT-4.1-mini then scores each segment for hook strength and payoff quality. With 100+ languages (vs Vizard's 20-30), Kllivo is significantly stronger for multilingual creators.
 
 Where Vizard excels is in its workflow features: URL import, direct publishing to 5+ platforms, scheduling, brand kits, and animated caption styles. If you need an end-to-end content pipeline, Vizard offers more. If you want the smartest, most accurate clips, Kllivo delivers.`,
     verdict: `Choose Kllivo if clip quality and multilingual support are your priorities. Choose Vizard if you need URL import, social publishing, brand kits, and animated captions in one platform.`,
@@ -316,23 +344,27 @@ Where Vizard excels is in its workflow features: URL import, direct publishing t
     proPrice: 49,
     features: [
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "AI highlight detection" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Virality score" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Virality score" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages", kllivo: "100+", competitor: "28+" },
-      { name: "Input method", kllivo: "File upload", competitor: "YouTube URL (primary)" },
+      { name: "Input method", kllivo: "File upload + YouTube URL", competitor: "YouTube URL (primary)" },
       { name: "Auto-reframing", kllivo: false, competitor: "Speaker face tracking" },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles" },
-      { name: "Aspect ratios", kllivo: "9:16", competitor: "9:16, 1:1" },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1" },
       { name: "Processing speed", kllivo: "2-5 min for 30min video", competitor: "~5-10 min for 1hr video" },
       { name: "Self-hostable storage", kllivo: true, competitor: false },
       { name: "Starter price", kllivo: "$19/mo", competitor: "~$29/mo" },
     ],
     kllivoAdvantages: [
       "Topic-aware segmentation vs generic AI highlight detection",
+      "Multi-dimensional scoring with audio energy detection — not just a single virality number",
       "Sentence-boundary cuts — clips never end mid-sentence",
+      "YouTube URL import now supported — matching Klap's core workflow",
+      "More aspect ratios: 9:16, 1:1, 16:9, 4:5 vs Klap's 9:16 and 1:1",
       "100+ languages vs Klap's 28+",
       "$19/mo starter vs Klap's $29/mo — 35% cheaper",
-      "Self-hostable storage option",
     ],
     metaTitle: "Kllivo vs Klap AI: AI Video Clipping Compared (2026)",
     metaDescription: "Compare Kllivo and Klap AI. Kllivo offers topic-aware clips at $19/mo vs Klap's $29/mo. 100+ languages, sentence-boundary cuts, and smarter AI scoring.",
@@ -342,8 +374,8 @@ Klap uses AI to detect highlights and auto-reframes video with speaker face trac
 
 Kllivo costs 35% less ($19/mo vs $29/mo for starter plans) and produces semantically smarter clips. Topic-aware segmentation means each clip covers one complete idea, and sentence-boundary cuts ensure clean endings. Kllivo also supports 100+ languages vs Klap's 28+.
 
-The key trade-off: Klap offers zero-friction YouTube URL input and speaker face tracking. Kllivo requires file upload but delivers more accurate, complete clips. If you work primarily with YouTube content and want speed, Klap is convenient. If clip quality matters, Kllivo is the smarter choice at a lower price.`,
-    verdict: `Choose Kllivo for smarter clips at a lower price ($19 vs $29/mo). Choose Klap if you want zero-friction YouTube URL import and speaker face tracking.`,
+Kllivo now also supports YouTube URL import, closing the gap on Klap's core workflow advantage. With more aspect ratios (9:16, 1:1, 16:9, 4:5 vs Klap's 9:16 and 1:1), audio energy detection, and comparative LLM ranking, Kllivo offers a more thorough analysis at a lower price. The main remaining advantage for Klap is speaker face tracking for auto-reframing.`,
+    verdict: `Choose Kllivo for smarter clips at a lower price ($19 vs $29/mo) with YouTube URL import. Choose Klap if you specifically need speaker face tracking for auto-reframing.`,
     faqs: [
       { q: "Is Kllivo cheaper than Klap AI?", a: "Yes. Kllivo's Starter plan is $19/mo vs Klap's $29/mo — 35% cheaper. Both offer free plans. Kllivo also supports more languages (100+ vs 28+)." },
       { q: "Does Klap AI support file uploads?", a: "Klap's primary input is YouTube URLs. File upload was added later. Kllivo supports direct file upload (MP4, MOV, AVI, MKV) with S3 support for large files." },
@@ -361,25 +393,28 @@ The key trade-off: Klap offers zero-friction YouTube URL input and speaker face 
     proPrice: 50,
     features: [
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "AI highlight detection" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Virality score (0-100)" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Virality score (0-100)" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages", kllivo: "100+", competitor: "30+" },
       { name: "AI B-Roll", kllivo: false, competitor: "Auto-inserts stock footage" },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles (karaoke, bounce, fade)" },
-      { name: "Aspect ratios", kllivo: "9:16", competitor: "9:16, 1:1, 16:9, 4:5" },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9, 4:5" },
       { name: "Social publishing", kllivo: false, competitor: "Multi-platform + scheduling" },
       { name: "Brand kit", kllivo: "Custom watermark (Pro)", competitor: "Full brand kit" },
-      { name: "URL import", kllivo: false, competitor: "YouTube, Vimeo, Dropbox, Google Drive" },
+      { name: "URL import", kllivo: "YouTube", competitor: "YouTube, Vimeo, Dropbox, Google Drive" },
       { name: "SRT/VTT export", kllivo: false, competitor: true },
       { name: "Self-hostable storage", kllivo: true, competitor: false },
       { name: "Starter price", kllivo: "$19/mo", competitor: "~$30/mo" },
     ],
     kllivoAdvantages: [
       "Topic-aware segmentation — clips cover one complete idea",
+      "Multi-dimensional scoring: hook, payoff, pace + audio energy vs single virality score",
       "Sentence-boundary cuts — no mid-sentence endings",
+      "YouTube URL import and matching aspect ratios (9:16, 1:1, 16:9, 4:5)",
       "100+ languages vs Vidyo's 30+",
       "$19/mo vs Vidyo's ~$30/mo starter — 37% cheaper",
-      "Self-hostable storage for data privacy",
     ],
     metaTitle: "Kllivo vs Vidyo AI: AI Video Clipping Compared (2026)",
     metaDescription: "Compare Kllivo and Vidyo AI. Topic-aware clips at $19/mo vs Vidyo's $30/mo. 100+ languages, sentence-boundary cuts, and smarter scoring.",
@@ -409,9 +444,13 @@ The trade-off: Vidyo has more workflow features (B-Roll, scheduling, brand kit, 
     features: [
       { name: "Primary purpose", kllivo: "AI clip generation", competitor: "Full video/audio editor" },
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "AI Clips / Highlights" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Implicit ranking" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Implicit ranking" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages", kllivo: "100+", competitor: "23+" },
+      { name: "YouTube URL import", kllivo: true, competitor: false },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9" },
       { name: "Text-based editing", kllivo: false, competitor: "Edit video by editing transcript" },
       { name: "Voice cloning (Overdub)", kllivo: false, competitor: true },
       { name: "Eye contact correction", kllivo: false, competitor: true },
@@ -435,7 +474,7 @@ The trade-off: Vidyo has more workflow features (B-Roll, scheduling, brand kit, 
 
 Descript added AI Clips as a feature within its broader editing platform. It identifies highlights and suggests short clips, but clip generation is one feature among many — not the core focus. The clip detection doesn't use semantic segmentation or sentence-boundary analysis.
 
-Kllivo is purpose-built for one thing: turning long videos into the best possible short clips. Topic-aware segmentation, sentence-boundary cuts, and hook/payoff scoring via GPT-4o-mini mean Kllivo produces clips that cover complete ideas and end cleanly. With 100+ languages (vs Descript's 23+), it's also stronger for multilingual content.
+Kllivo is purpose-built for one thing: turning long videos into the best possible short clips. Topic-aware segmentation, sentence-boundary cuts, and hook/payoff scoring via GPT-4.1-mini mean Kllivo produces clips that cover complete ideas and end cleanly. With 100+ languages (vs Descript's 23+), it's also stronger for multilingual content.
 
 The choice depends on what you need. If you want a full video editor that also clips, Descript is excellent. If you want the best AI-generated clips without learning a complex editor, Kllivo is simpler, cheaper ($19 vs $24/mo), and smarter at finding complete, engaging moments.`,
     verdict: `Choose Kllivo if you want the best AI clips without the complexity of a full editor. Choose Descript if you need a complete video editing suite with clipping as one of many features.`,
@@ -457,10 +496,13 @@ The choice depends on what you need. If you want a full video editor that also c
     features: [
       { name: "Primary purpose", kllivo: "AI clip generation", competitor: "Browser-based video editor" },
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "Smart Cut / Clip Finder" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Implicit ranking" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Implicit ranking" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Languages (subtitles)", kllivo: "100+", competitor: "70+" },
-      { name: "URL import", kllivo: false, competitor: "YouTube, TikTok URLs" },
+      { name: "URL import", kllivo: "YouTube", competitor: "YouTube, TikTok URLs" },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9+" },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles" },
       { name: "Background remover", kllivo: false, competitor: true },
       { name: "Team collaboration", kllivo: false, competitor: "Real-time editing (Business)" },
@@ -504,13 +546,15 @@ Choose Kapwing if you need a versatile browser editor with many AI tools. Choose
     pricingNote: "Starter (~$32/mo annual). Most expensive in the category.",
     features: [
       { name: "AI clip detection", kllivo: "Topic-aware semantic analysis", competitor: "AI extraction + trend analysis" },
-      { name: "Clip scoring", kllivo: "Hook & payoff scoring (GPT-4o-mini)", competitor: "Munch Score (trend-aware)" },
+      { name: "Clip scoring", kllivo: "Hook, payoff & pace scoring (GPT-4.1-mini)", competitor: "Munch Score (trend-aware)" },
+      { name: "Audio energy detection", kllivo: true, competitor: false },
+      { name: "Comparative LLM ranking", kllivo: true, competitor: false },
       { name: "Sentence-boundary cuts", kllivo: true, competitor: false },
       { name: "Trend analysis", kllivo: false, competitor: "Cross-references social media trends" },
       { name: "Languages", kllivo: "100+", competitor: "Multiple (fewer)" },
-      { name: "YouTube URL import", kllivo: false, competitor: true },
+      { name: "YouTube URL import", kllivo: true, competitor: true },
       { name: "Animated captions", kllivo: "Basic", competitor: "Multiple styles" },
-      { name: "Aspect ratios", kllivo: "9:16", competitor: "9:16, 1:1, 16:9" },
+      { name: "Aspect ratios", kllivo: "9:16, 1:1, 16:9, 4:5", competitor: "9:16, 1:1, 16:9" },
       { name: "In-app editor", kllivo: false, competitor: false },
       { name: "Self-hostable storage", kllivo: true, competitor: false },
       { name: "Free plan", kllivo: "1 video/mo", competitor: "~2-3 clips" },
