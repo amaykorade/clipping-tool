@@ -38,7 +38,7 @@ export async function scoreAndTitleSegments(
   const res = await withCircuitBreaker(
     { name: "openai" },
     () => client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.4,
     }),
@@ -135,7 +135,7 @@ export async function scoreAndTitleSegments(
     .filter(
       (c) =>
         c.confidence >= 0.6 &&
-        c.duration >= 25 && // at least ~25s to avoid ultra-short, contextless clips
+        c.duration >= 15 && // allow punchy 15-25s clips (top performers on TikTok)
         c.duration <= 90, // at most ~90s
     )
     .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
@@ -181,9 +181,10 @@ async function runHookPayoffAndOneIdeaGate(
   const prompt = `You are judging short-form video clips (e.g. for Reels/TikTok). For each clip below, rate:
 1) hookScore (1-10): strength of the OPENING as a hook — does the first 3-5 seconds grab attention? (surprising, bold, curiosity, promise, emotion)
 2) payoffScore (1-10): strength of the ENDING as a payoff — does it feel like a conclusion, takeaway, or punchline? (not a lead-in like "So next..." or "Number two...")
-3) oneClearIdea (true/false): does this clip convey ONE clear, complete idea that makes sense on its own?
+3) paceScore (1-10): does the MIDDLE maintain momentum? A high score means every sentence adds value — no rambling, no repetition, no dead air. A low score means the speaker wanders, repeats themselves, or has long filler sections between the hook and payoff.
+4) oneClearIdea (true/false): does this clip convey ONE clear, complete idea that makes sense on its own?
 
-Return a JSON array with one object per clip, in the same order, with keys: startTime, endTime, hookScore, payoffScore, oneClearIdea.
+Return a JSON array with one object per clip, in the same order, with keys: startTime, endTime, hookScore, payoffScore, paceScore, oneClearIdea.
 
 Clips (startTime, endTime in seconds; text = transcript):
 ${JSON.stringify(withText.map((c) => ({ startTime: c.startTime, endTime: c.endTime, text: c.text })), null, 2)}
@@ -192,7 +193,7 @@ Return ONLY the JSON array.`;
 
   try {
     const res = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
     });
@@ -210,6 +211,7 @@ Return ONLY the JSON array.`;
       endTime?: number;
       hookScore?: number;
       payoffScore?: number;
+      paceScore?: number;
       oneClearIdea?: boolean;
     }>;
     if (!Array.isArray(parsed)) return shortlist;
@@ -221,8 +223,9 @@ Return ONLY the JSON array.`;
       const key = `${clip.startTime}-${clip.endTime}`;
       const hook = typeof p.hookScore === "number" ? p.hookScore : 0;
       const payoff = typeof p.payoffScore === "number" ? p.payoffScore : 0;
+      const pace = typeof p.paceScore === "number" ? p.paceScore : 5;
       const one = p.oneClearIdea === true;
-      if (hook >= minScore && payoff >= minScore && one) passed.add(key);
+      if (hook >= minScore && payoff >= minScore && pace >= 5 && one) passed.add(key);
     }
 
     const filtered = shortlist.filter(
@@ -237,6 +240,88 @@ Return ONLY the JSON array.`;
   } catch (e) {
     console.warn("[clipScoring] Hook/payoff/one-idea gate failed, keeping shortlist:", e);
     return shortlist;
+  }
+}
+
+/**
+ * Step 4b: Comparative ranking. Instead of relying on absolute confidence scores,
+ * send all shortlisted clips to the LLM and ask it to rank them head-to-head.
+ * This produces much better ordering than independent absolute scores.
+ */
+export async function comparativeRank(
+  clips: ClipSuggestion[],
+  segments: { start: number; end: number; text: string }[],
+): Promise<ClipSuggestion[]> {
+  if (clips.length <= 2) return clips; // no point ranking 1-2 clips
+
+  const withText = clips.map((c, idx) => {
+    const seg = segments.find(
+      (s) => Math.abs(s.start - c.startTime) < 0.5 && Math.abs(s.end - c.endTime) < 0.5,
+    );
+    return { idx, title: c.title, startTime: c.startTime, endTime: c.endTime, text: seg?.text ?? "" };
+  }).filter((c) => c.text.length > 0);
+
+  if (withText.length <= 2) return clips;
+
+  const prompt = `You are ranking short-form video clips for TikTok/Reels/Shorts. Below are ${withText.length} clips (title + transcript). Rank them from BEST to WORST for short-form engagement.
+
+Consider:
+- Would a viewer watch this clip all the way to the end?
+- Does it start with something that stops the scroll?
+- Is the ending satisfying (punchline, takeaway, revelation)?
+- Is the pacing tight throughout (no filler in the middle)?
+- Would someone share this or watch it twice?
+
+Return a JSON array of objects in order from BEST to WORST: [{ "idx": number }]
+Where idx is the clip index from the list below.
+
+Clips:
+${JSON.stringify(withText.map((c) => ({ idx: c.idx, title: c.title, text: c.text.slice(0, 400) })), null, 2)}
+
+Return ONLY the JSON array.`;
+
+  try {
+    const res = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    });
+
+    const content = res.choices[0]?.message?.content;
+    if (!content) return clips;
+
+    let raw = content.trim();
+    const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) raw = codeBlockMatch[1].trim();
+    const arrayMatch = raw.match(/\[[\s\S]*\]/);
+    if (arrayMatch) raw = arrayMatch[0];
+
+    const parsed = JSON.parse(raw) as Array<{ idx: number }>;
+    if (!Array.isArray(parsed) || parsed.length === 0) return clips;
+
+    // Rebuild clips array in ranked order, assign new confidence based on rank position
+    const ranked: ClipSuggestion[] = [];
+    const seen = new Set<number>();
+    for (let rank = 0; rank < parsed.length; rank++) {
+      const idx = parsed[rank]?.idx;
+      if (typeof idx === "number" && idx >= 0 && idx < clips.length && !seen.has(idx)) {
+        seen.add(idx);
+        // Top clip gets 0.95, second gets 0.90, etc. — floor at 0.60
+        const newConfidence = Math.max(0.60, 0.95 - rank * 0.05);
+        ranked.push({ ...clips[idx], confidence: newConfidence });
+      }
+    }
+
+    // Add any clips the LLM missed (shouldn't happen, but be safe)
+    for (let i = 0; i < clips.length; i++) {
+      if (!seen.has(i)) ranked.push(clips[i]);
+    }
+
+    console.log(`[clipScoring] Comparative ranking: reordered ${ranked.length} clips`);
+    return ranked;
+  } catch (e) {
+    console.warn("[clipScoring] Comparative ranking failed, keeping original order:", e);
+    return clips;
   }
 }
 
@@ -260,7 +345,7 @@ You are given a list of candidate segments with:
 - startTime and endTime in seconds (relative to the full video)
 - text (transcript of just that segment)
 
-Each candidate segment is built from COMPLETE SENTENCES ONLY: it starts at the start of a sentence and ends at the end of a sentence (no mid-sentence cuts). Segments are usually 25–70 seconds and contain 1–6 sentences. Your job is to decide which of these pre-made segments are worth turning into short clips. Use each segment's startTime and endTime as-is; do not suggest different times (we will use the full segment boundaries).
+Each candidate segment is built from COMPLETE SENTENCES ONLY: it starts at the start of a sentence and ends at the end of a sentence (no mid-sentence cuts). Segments range from 15–70 seconds and contain 1–8 sentences. SHORT punchy clips (15-30s) with one killer idea are GREAT — don't skip them just because they're short. Your job is to decide which of these pre-made segments are worth turning into short clips. Use each segment's startTime and endTime as-is; do not suggest different times (we will use the full segment boundaries).
 
 For each candidate, judge:
 1) HOOK QUALITY (very important)

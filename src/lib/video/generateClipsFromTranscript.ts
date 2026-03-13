@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
-import { scoreAndTitleSegments } from "@/lib/ai/clipScoring";
+import { scoreAndTitleSegments, comparativeRank } from "@/lib/ai/clipScoring";
 import { getBeatsFromTranscript } from "@/lib/ai/semanticSegmentation";
 import { refineClipBoundaries, applyTrailingAndOpeningRules } from "@/lib/ai/clipRefinement";
+import { analyzeAudioEnergy, formatEnergyTag } from "@/lib/ai/audioEnergy";
 import type { Transcript, ClipSuggestion, TranscriptWord } from "@/types";
 import { ClipStatus, AspectRatio } from "@/generated/prisma";
 
@@ -78,7 +79,7 @@ export interface CreatedClip {
  */
 export async function generateClipsFromTranscript(
   videoId: string,
-  options: { maxClips?: number } = {},
+  options: { maxClips?: number; videoFilePath?: string } = {},
 ): Promise<CreatedClip[]> {
   const video = await prisma.video.findUnique({
     where: { id: videoId },
@@ -126,9 +127,9 @@ export async function generateClipsFromTranscript(
       ? ((transcript as any).sentences as { text: string; start: number; end: number }[])
       : [];
 
-  const minClipSec = 25; // target: more substantial clips
+  const minClipSec = 15; // allow punchy short clips (15-25s perform best on TikTok)
   const maxClipSec = 70;
-  const maxSentencesPerClip = 6;
+  const maxSentencesPerClip = 8; // more sentences allowed since min duration is lower
   const maxCandidates = 200;
 
   const endsWithSentencePunctuation = (text: string): boolean => {
@@ -146,11 +147,29 @@ export async function generateClipsFromTranscript(
     console.warn("[generateClipsFromTranscript] Beat detection failed, using full transcript:", err);
   }
 
-  // If we have beats, build candidates only within each beat; otherwise use the whole transcript as one range.
-  const rangesToUse: { start: number; end: number }[] =
+  // If we have beats, build candidates within each beat + across adjacent beat boundaries.
+  const withinBeatRanges: { start: number; end: number }[] =
     beats.length > 0
       ? beats.map((b) => ({ start: b.startSentenceIndex, end: b.endSentenceIndex }))
       : [{ start: 0, end: sentences.length - 1 }];
+
+  // Cross-beat candidates: last N sentences of beat K + first M sentences of beat K+1
+  // This catches "bridging moments" — transitions often contain reveals/reactions.
+  const crossBeatRanges: { start: number; end: number }[] = [];
+  if (beats.length > 1) {
+    for (let k = 0; k < beats.length - 1; k++) {
+      const beatA = beats[k];
+      const beatB = beats[k + 1];
+      // Take last 3 sentences of beat A + first 3 of beat B (up to 6 total)
+      const crossStart = Math.max(beatA.startSentenceIndex, beatA.endSentenceIndex - 2);
+      const crossEnd = Math.min(beatB.endSentenceIndex, beatB.startSentenceIndex + 2);
+      if (crossEnd > crossStart) {
+        crossBeatRanges.push({ start: crossStart, end: crossEnd });
+      }
+    }
+  }
+
+  const rangesToUse = [...withinBeatRanges, ...crossBeatRanges];
 
   const LONG_PAUSE_SEC = 1.5; // Step 3: prefer clip boundaries at long pauses
   type SegmentWithIndices = { start: number; end: number; text: string; startSentenceIndex: number; endSentenceIndex: number };
@@ -222,8 +241,29 @@ export async function generateClipsFromTranscript(
     "| Candidate segments:",
     segments.length,
   );
+
+  // Audio energy analysis: tag segments with energy levels before sending to scoring LLM.
+  // This helps the LLM prefer clips with energetic delivery (louder, more emphatic speech).
+  let segmentsForScoring = segments;
+  if (options.videoFilePath) {
+    try {
+      const energyResults = await analyzeAudioEnergy(options.videoFilePath, segments);
+      segmentsForScoring = segments.map((seg, idx) => {
+        const tag = energyResults[idx] ? formatEnergyTag(energyResults[idx].energy) : "";
+        return tag ? { ...seg, text: `${seg.text} ${tag}` } : seg;
+      });
+      const highCount = energyResults.filter((e) => e.energy === "high").length;
+      const lowCount = energyResults.filter((e) => e.energy === "low").length;
+      console.log(
+        `[generateClipsFromTranscript] Audio energy: ${highCount} high, ${lowCount} low, ${energyResults.length - highCount - lowCount} medium`,
+      );
+    } catch (err) {
+      console.warn("[generateClipsFromTranscript] Audio energy analysis failed, proceeding without:", err);
+    }
+  }
+
   const hasFeedback = feedbackData.liked.length > 0 || feedbackData.disliked.length > 0;
-  let suggestions = await scoreAndTitleSegments(segments, {
+  let suggestions = await scoreAndTitleSegments(segmentsForScoring, {
     maxClips,
     ...(hasFeedback && { feedback: feedbackData }),
   });
@@ -239,6 +279,12 @@ export async function generateClipsFromTranscript(
       reason: "Fallback from segment",
     }));
     console.log("[generateClipsFromTranscript] Using fallback suggestions:", suggestions.length);
+  }
+
+  // Step 4b: Comparative ranking — re-order clips by head-to-head LLM comparison
+  // (much better than relying on absolute confidence scores alone).
+  if (suggestions.length > 2) {
+    suggestions = await comparativeRank(suggestions, segments);
   }
 
   // Step 5: Refinement — LLM suggests tighter start/end sentence; re-cut to sentence boundaries.

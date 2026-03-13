@@ -2,6 +2,7 @@ import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTransc
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
+import { getStorage } from "@/lib/storage";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 
 export async function POST(
@@ -24,7 +25,27 @@ export async function POST(
       if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
     }
 
-    const clips = await generateClipsFromTranscript(videoId, { maxClips: 10 });
+    // Download video to temp file for audio energy analysis
+    const video2 = await prisma.video.findUnique({ where: { id: videoId }, select: { storageKey: true } });
+    let videoFilePath: string | undefined;
+    const tmpPath = `/tmp/${videoId}-clips.mp4`;
+    try {
+      if (video2?.storageKey) {
+        const storage = getStorage();
+        await storage.downloadToFile(video2.storageKey, tmpPath);
+        videoFilePath = tmpPath;
+      }
+    } catch { /* proceed without audio energy */ }
+
+    let clips;
+    try {
+      clips = await generateClipsFromTranscript(videoId, { maxClips: 10, videoFilePath });
+    } finally {
+      if (videoFilePath) {
+        const fs = await import("fs/promises");
+        fs.unlink(tmpPath).catch(() => {});
+      }
+    }
     return NextResponse.json({
       clips: clips.map((c) => ({
         id: c.id,
