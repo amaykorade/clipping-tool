@@ -69,6 +69,7 @@ Build requires `prisma generate` first (handled automatically by build script an
 ## Key Patterns
 
 - **Path alias**: `@/*` maps to `src/*`
+- **Prisma generated client**: Output is `src/generated/prisma` (not `node_modules`). Import types/enums from `@/generated/prisma`
 - **Auth helpers**: `requireAuth()` and `canAccessVideo()` in `src/lib/auth.ts`
 - **Error mapping**: `toUserFriendlyError()` and `getSafeApiErrorMessage()` in `src/lib/errorMessages.ts` — never expose internal errors (Redis, API keys) to users
 - **Prisma singleton**: `src/lib/db/index.ts` — uses driver adapter pattern for serverless compatibility

@@ -1,6 +1,6 @@
 # Competitive Analysis — Kllivo (Clipflow)
 
-> Last updated: 2026-03-12
+> Last updated: 2026-03-13
 > Sources: Opus Clip website (verified March 2026), Sacra, Latka, Crunchbase, TechCrunch, Tracxn
 
 ---
@@ -217,13 +217,18 @@ Kllivo starter ($19) is competitive. Pro ($49) is on the higher side given featu
 | Topic-aware segmentation | **Y** | ~ | ~ | ~ | ~ | ~ | ~ | ~ |
 | Sentence-boundary cuts | **Y** | N | N | N | N | N | N | N |
 | Hook & payoff scoring | **Y** | ~ | ~ | ~ | ~ | ~ | ~ | ~ |
+| Pace/middle scoring | **Y** | N | N | N | N | N | N | N |
+| Audio energy detection | **Y** | N | N | N | N | N | N | N |
+| Comparative LLM ranking | **Y** | N | N | N | N | N | N | N |
+| Cross-beat clip candidates | **Y** | N | N | N | N | N | N | N |
+| Platform presets | **Y** | ~ | ~ | ~ | ~ | N | N | N |
 | 100+ languages | **Y** | N (25+) | N (20-30) | N (28+) | N (30+) | N (23+) | Y (70+) | N |
 | Animated captions | N | Y | Y | Y | Y | Y | Y | Y |
 | Multiple caption styles | N | Y | Y | Y | Y | Y | Y | Y |
 | URL import (YouTube) | N | Y | Y | Y | Y | N | Y | Y |
 | Direct social publish | N | Y | Y | N | Y | ~ | N | ~ |
 | Social scheduler | N | Y | N | N | Y | N | N | N |
-| Multiple aspect ratios | N | Y | Y | Y | Y | Y | Y | Y |
+| Multiple aspect ratios | **Y** | Y | Y | Y | Y | Y | Y | Y |
 | In-app editor | N | Y | Y | ~ | ~ | Y | Y | N |
 | AI B-Roll | N | Y | Y | ~ | Y | N | N | N |
 | Brand kit | N | Y | Y | N | Y | N | Y | N |
@@ -246,13 +251,28 @@ Kllivo starter ($19) is competitive. Pro ($49) is on the higher side given featu
 
 1. **Topic-aware semantic segmentation** — No competitor does this. They cut by silence, timestamps, or basic AI. Kllivo detects topic boundaries.
 2. **Sentence-boundary cuts** — Clips never end mid-sentence. Unique.
-3. **Hook & payoff scoring** — GPT-4o-mini evaluates opening strength and idea completion.
-4. **100+ language support** — Best in class (via AssemblyAI).
-5. **Self-hostable storage** — Local or S3 mode. Privacy advantage.
-6. **No clip expiry** — Opus Clip free clips expire in 3 days.
-7. **Cheapest meaningful starter** — $19/mo with 10 videos and no watermark.
-8. **Razorpay billing** — Serves Indian market where Stripe is limited.
-9. **Transparent AI pipeline** — Users can understand what the AI is doing.
+3. **Hook, payoff & pace scoring** — GPT-4.1-mini evaluates opening hook strength, ending payoff, middle pacing, and one-idea completeness. Multi-dimensional gate.
+4. **Audio energy detection** — FFmpeg-based loudness analysis tags segments as energetic/quiet, biasing the AI toward high-energy moments. No competitor does this at the scoring level.
+5. **Comparative LLM ranking** — Instead of just absolute scores, clips are ranked head-to-head for better ordering. Unique approach.
+6. **Cross-beat candidate generation** — Clips can span topic boundaries (transitions often contain reveals/reactions). No competitor does this.
+7. **100+ language support** — Best in class (via AssemblyAI).
+8. **Multiple aspect ratios** — 9:16, 1:1, 16:9, 4:5, with platform presets (TikTok, Reels, Shorts, Twitter, LinkedIn).
+9. **Self-hostable storage** — Local or S3 mode. Privacy advantage.
+10. **No clip expiry** — Opus Clip free clips expire in 3 days.
+11. **Cheapest meaningful starter** — $19/mo with 10 videos and no watermark.
+12. **Razorpay billing** — Serves Indian market where Stripe is limited.
+
+---
+
+## Recently Completed (2026-03-13)
+
+- ~~Multiple aspect ratios~~ — 9:16, 1:1, 16:9, 4:5 with platform presets (TikTok, Reels, Shorts, Twitter, LinkedIn)
+- ~~GPT-4.1-mini upgrade~~ — Better scoring quality for clip selection and hook/payoff gate
+- ~~Audio energy detection~~ — FFmpeg loudness analysis biases scoring toward high-energy moments
+- ~~Comparative LLM ranking~~ — Head-to-head clip ranking instead of absolute scores
+- ~~Cross-beat candidates~~ — Clips spanning topic transitions (reveals/reactions)
+- ~~Pace scoring~~ — Middle-of-clip momentum scoring (filters out rambly clips)
+- ~~15s minimum clips~~ — Short punchy clips now allowed (top TikTok format)
 
 ---
 
@@ -261,17 +281,17 @@ Kllivo starter ($19) is competitive. Pro ($49) is on the higher side given featu
 ### HIGH PRIORITY (biggest revenue/growth impact)
 1. **YouTube URL import** — Every major competitor has this. Zero-friction onboarding.
 2. **Multiple animated caption styles** — Table-stakes feature. All competitors offer it.
-3. **Multiple aspect ratios** (1:1 square, 16:9 landscape) — Currently 9:16 only.
 
 ### MEDIUM PRIORITY (competitive parity)
-4. **Direct social publishing** (TikTok, YouTube Shorts, IG Reels) — Opus, Vizard, Vidyo have it.
-5. **In-app clip editor** (trim, adjust, add text/music) — Opus, Descript, Kapwing have it.
-6. **Brand kit** (logos, fonts, colors saved per account) — Multiple competitors offer this.
-7. **Higher file size limits** — Opus allows 10-30GB vs Kllivo's 500MB-3GB.
-8. **SRT/VTT subtitle export** — Vizard, Kapwing, Descript have it.
+3. **Direct social publishing** (TikTok, YouTube Shorts, IG Reels) — Opus, Vizard, Vidyo have it.
+4. **In-app clip editor** (trim, adjust, add text/music) — Opus, Descript, Kapwing have it.
+5. **Brand kit** (logos, fonts, colors saved per account) — Multiple competitors offer this.
+6. **Higher file size limits** — Opus allows 10-30GB vs Kllivo's 500MB-3GB.
+7. **SRT/VTT subtitle export** — Vizard, Kapwing, Descript have it.
 
 ### LOW-MEDIUM PRIORITY (differentiators)
-9. **AI B-Roll** (auto-insert stock/generated footage) — Opus, Vizard, Vidyo have it.
+8. **AI B-Roll** (auto-insert stock/generated footage) — Opus, Vizard, Vidyo have it.
+9. **Visual scoring** (keyframe analysis for visual engagement) — Plan exists, not yet implemented.
 10. **Social media scheduler** — Opus and Vidyo have it.
 11. **Trend-aware scoring** (like Munch's trend analysis) — Unique differentiator opportunity.
 12. **Clip analytics** (view performance data) — Opus Pro has it.
