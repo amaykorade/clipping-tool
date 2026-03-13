@@ -111,12 +111,18 @@ export async function renderAndUploadClip(
       console.warn("[ClipRenderer] Thumbnail generation failed:", e);
     }
 
-    // Update clip with output URL and thumbnail
+    // Update clip with output URL, thumbnail, and actual aspect ratio used
+    const renderedAspect = preset
+      ? preset.aspectRatio === "1:1" ? AspectRatio.SQUARE
+        : preset.aspectRatio === "16:9" ? AspectRatio.LANDSCAPE
+        : AspectRatio.VERTICAL
+      : clip.aspectRatio;
     await prisma.clip.update({
       where: { id: clipId },
       data: {
         outputUrl: uploadResult.url,
         thumbnailUrl,
+        aspectRatio: renderedAspect,
         status: ClipStatus.COMPLETED,
       },
     });

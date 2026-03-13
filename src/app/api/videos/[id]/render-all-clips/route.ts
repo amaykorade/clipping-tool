@@ -5,6 +5,7 @@ import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 import { MAX_ACTIVE_JOBS_PER_USER, getPlanLimits } from "@/lib/plans";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 import { JobType, JobStatus } from "@/generated/prisma";
+import { getPreset, validatePreset } from "@/lib/video/presets";
 
 export async function POST(
   _req: NextRequest,
@@ -12,6 +13,17 @@ export async function POST(
 ) {
   const { id } = await context.params;
   const session = await getSession();
+
+  // Optional preset for platform-specific rendering
+  let presetId: string | null = null;
+  try {
+    const body = await _req.json();
+    if (typeof body?.presetId === "string") presetId = body.presetId;
+  } catch { /* no body */ }
+  const preset = presetId ? getPreset(presetId) : undefined;
+  if (presetId && !preset) {
+    return NextResponse.json({ error: `Unknown preset "${presetId}"` }, { status: 400 });
+  }
 
   const video = await prisma.video.findUnique({
     where: { id },
@@ -30,7 +42,19 @@ export async function POST(
     if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
   }
 
-  const pendingClips = video.clips.filter((c) => c.status === "PENDING");
+  let pendingClips = video.clips.filter((c) => c.status === "PENDING");
+
+  // If a preset is specified and no pending clips, allow re-rendering completed clips in the new format
+  if (pendingClips.length === 0 && preset) {
+    const completedClips = video.clips.filter((c) => c.status === "COMPLETED");
+    if (completedClips.length > 0) {
+      await prisma.clip.updateMany({
+        where: { id: { in: completedClips.map((c) => c.id) }, videoId: id },
+        data: { status: "PENDING", outputUrl: null, thumbnailUrl: null },
+      });
+      pendingClips = completedClips.map((c) => ({ ...c, status: "PENDING" as const }));
+    }
+  }
 
   if (pendingClips.length === 0) {
     return NextResponse.json({
@@ -59,7 +83,22 @@ export async function POST(
     const { videoQueue } = await import("@/lib/queue");
     const jobIds: string[] = [];
 
-    for (const clip of pendingClips) {
+    // Filter out clips that exceed the preset's max duration
+    const clipsToRender = preset
+      ? pendingClips.filter((c) => !validatePreset(preset, c.endTime - c.startTime))
+      : pendingClips;
+
+    if (clipsToRender.length === 0) {
+      return NextResponse.json({
+        success: true,
+        count: 0,
+        message: preset
+          ? `No clips fit within ${preset.label}'s ${preset.maxDurationSec}s limit`
+          : "No clips to render",
+      });
+    }
+
+    for (const clip of clipsToRender) {
       const dbJob = await prisma.job.create({
         data: {
           type: JobType.GENERATE_CLIP,
@@ -76,6 +115,7 @@ export async function POST(
         {
           type: JobType.GENERATE_CLIP,
           clipId: clip.id,
+          ...(preset && { presetId: preset.id }),
         },
         { jobId: dbJob.id, priority },
       );
@@ -85,8 +125,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      count: pendingClips.length,
+      count: clipsToRender.length,
       jobIds,
+      ...(preset && clipsToRender.length < pendingClips.length && {
+        skipped: pendingClips.length - clipsToRender.length,
+        message: `${pendingClips.length - clipsToRender.length} clip(s) skipped — exceeds ${preset.label}'s ${preset.maxDurationSec}s limit`,
+      }),
     });
   } catch (error) {
     console.error("[API] Render all clips error:", error);

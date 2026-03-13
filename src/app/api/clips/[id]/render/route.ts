@@ -32,8 +32,14 @@ export async function POST(
     if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
   }
 
-  // Optional preset for platform-specific rendering
-  const presetId = _req.nextUrl.searchParams.get("preset");
+  // Optional preset for platform-specific rendering (query param or JSON body)
+  let presetId = _req.nextUrl.searchParams.get("preset");
+  if (!presetId) {
+    try {
+      const body = await _req.json();
+      if (typeof body?.presetId === "string") presetId = body.presetId;
+    } catch { /* no body */ }
+  }
   const preset = presetId ? getPreset(presetId) : undefined;
   if (presetId && !preset) {
     return NextResponse.json({ error: `Unknown preset "${presetId}"` }, { status: 400 });
@@ -46,11 +52,19 @@ export async function POST(
     }
   }
 
-  if (clip.status === "COMPLETED") {
+  // Allow re-rendering in a different format; skip if same format already rendered
+  if (clip.status === "COMPLETED" && !preset) {
     return NextResponse.json({
       success: true,
       message: "Clip already rendered",
       outputUrl: clip.outputUrl,
+    });
+  }
+  if (clip.status === "COMPLETED" && preset) {
+    // Reset to PENDING so it can be re-rendered with the new preset
+    await prisma.clip.update({
+      where: { id },
+      data: { status: "PENDING", outputUrl: null, thumbnailUrl: null },
     });
   }
 

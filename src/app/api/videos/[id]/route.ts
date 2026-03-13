@@ -80,6 +80,7 @@ export async function GET(
         renderProgress: renderJob?.progress ?? null,
         speaker: c.speaker,
         feedback: c.feedback,
+        aspectRatio: c.aspectRatio,
       };
     }),
     errorDisplay,
