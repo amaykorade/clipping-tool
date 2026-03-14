@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { cancelSubscription } from "@/lib/razorpay";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 
 /**
  * POST /api/subscription/cancel
@@ -54,8 +55,9 @@ export async function POST(request: Request) {
     if (err.message === "Unauthorized") {
       return NextResponse.json({ error: "Please sign in" }, { status: 401 });
     }
+    console.error("[API] Cancel subscription error:", err);
     return NextResponse.json(
-      { error: err.message || "Failed to cancel subscription" },
+      { error: getSafeApiErrorMessage(err) },
       { status: 500 }
     );
   }

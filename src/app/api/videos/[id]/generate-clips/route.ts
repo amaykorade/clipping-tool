@@ -2,6 +2,7 @@ import { generateClipsFromTranscript } from "@/lib/video/generateClipsFromTransc
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 import { getStorage } from "@/lib/storage";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 
@@ -59,11 +60,13 @@ export async function POST(
     });
   } catch (err) {
     console.error("[generate-clips]", err);
-    const message = (err as Error).message || "Failed to generate clips";
+    const rawMsg = (err as Error).message || "";
     const status =
-      message.includes("not found") ? 404
-      : message.includes("transcribed") || message.includes("No transcript") ? 400
+      rawMsg.includes("not found") ? 404
+      : rawMsg.includes("transcribed") || rawMsg.includes("No transcript") ? 400
       : 500;
+    // For 4xx, the message is user-facing and safe; for 5xx, use safe error mapping
+    const message = status < 500 ? rawMsg : getSafeApiErrorMessage(err as Error);
     return NextResponse.json({ error: message }, { status });
   }
 }

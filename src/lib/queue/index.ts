@@ -39,6 +39,9 @@ function getConnection(): IORedis {
         tls: { rejectUnauthorized: true },
       }),
     });
+    _connection.on("error", (err) => {
+      console.error("[Queue] Redis connection error:", err.message);
+    });
   }
   return _connection;
 }

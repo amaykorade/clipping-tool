@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits } from "@/lib/plans";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 import { createPendingUploadForDirectUpload } from "@/lib/video/upload";
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("[API] Upload URL error:", error);
     return NextResponse.json(
-      { error: err.message || "Failed to create upload URL" },
+      { error: getSafeApiErrorMessage(err) },
       { status: 500 },
     );
   }

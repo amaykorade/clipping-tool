@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import KllivoLogo from "@/components/ui/KllivoLogo";
 import { getBaseUrl } from "@/lib/seo";
 
 const baseUrl = getBaseUrl();
@@ -625,8 +626,8 @@ export default async function Home({
           <div className="mx-auto max-w-5xl">
             <div className="grid gap-10 border-b border-slate-700/60 pb-12 sm:grid-cols-4 sm:pb-14">
               <div className="sm:col-span-2">
-                <Link href="/" className="text-xl font-bold tracking-tight text-white">
-                  Kllivo
+                <Link href="/" className="text-white">
+                  <KllivoLogo size="md" showText textClassName="text-xl font-bold tracking-tight text-white" />
                 </Link>
                 <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-400">
                   Turn long-form videos into short-form clips for Reels, TikTok and YouTube Shorts — powered by AI.

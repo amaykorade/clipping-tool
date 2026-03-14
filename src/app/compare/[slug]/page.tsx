@@ -11,6 +11,7 @@ import { ComparisonTable } from "@/components/compare/ComparisonTable";
 import { VerdictBox } from "@/components/compare/VerdictBox";
 import { FAQSection } from "@/components/compare/FAQSection";
 import { AnimateIn, AnimateInStagger, StaggerItem } from "@/components/compare/AnimateIn";
+import KllivoLogo from "@/components/ui/KllivoLogo";
 
 const baseUrl = getBaseUrl();
 
@@ -126,7 +127,7 @@ export default async function CompetitorPage({
           {/* VS badge */}
           <AnimateIn>
             <div className="mb-8 inline-flex items-center gap-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600 text-sm font-black shadow-lg shadow-purple-600/30">K</span>
+              <KllivoLogo size="lg" className="shadow-lg shadow-purple-600/30 rounded-xl" />
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/10 text-xs font-bold text-purple-300 backdrop-blur-sm">VS</span>
               <span className="flex h-10 items-center rounded-xl border border-white/10 bg-white/5 px-3.5 text-sm font-bold text-slate-300 backdrop-blur-sm">{c.name}</span>
             </div>
@@ -219,7 +220,7 @@ export default async function CompetitorPage({
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-purple-200/30 blur-2xl dark:bg-purple-600/10" />
               <div className="relative">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-700 text-xs font-black text-white shadow-md shadow-purple-700/25">K</span>
+                  <KllivoLogo size="md" className="shadow-md shadow-purple-700/25 rounded-lg" />
                   <h3 className="text-lg font-bold text-purple-900 dark:text-purple-200">
                     Kllivo
                   </h3>

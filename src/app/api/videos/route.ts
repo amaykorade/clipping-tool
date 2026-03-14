@@ -55,11 +55,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // No page param — return all (backward compatible)
+    // No page param — return capped list (backward compatible shape, prevents huge responses)
     const videos = await prisma.video.findMany({
       where,
       orderBy: { createdAt: "desc" },
       select,
+      take: MAX_LIMIT,
     });
     return NextResponse.json({ videos });
   } catch (e) {

@@ -113,6 +113,10 @@ export async function getYouTubeVideoInfo(url: string): Promise<YouTubeVideoInfo
     if (error.stderr) {
       throw classifyYtDlpError(error.stderr);
     }
+    if (error.code === "ENOENT") {
+      console.error("[YouTube] yt-dlp not found. Install it: brew install yt-dlp");
+      throw new YouTubeError("YouTube import is not available. Server is missing yt-dlp.", "UNKNOWN");
+    }
     throw new YouTubeError("Could not fetch YouTube video info. Please check the URL.", "UNKNOWN");
   }
 }

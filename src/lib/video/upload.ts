@@ -48,26 +48,19 @@ export async function savePendingUpload(
   const ext = path.extname(originalFileName).toLowerCase();
   const pendingKey = `${PENDING_PREFIX}${videoId}${ext}`;
 
-  // Plan check: totalVideosUploaded (lifetime; duration check happens in worker)
-  if (userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, totalVideosUploaded: true, billingInterval: true },
-    });
-    if (user) {
-      const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
-      const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
-      if (!check.ok) throw new Error(check.error);
-    }
-  }
-
-  const storage = getStorage();
-  await storage.upload(fileBuffer, pendingKey, {
-    contentType: "video/mp4",
-    fileSize: fileBuffer.length,
-  });
-
+  // Atomic quota check + increment inside transaction to prevent race conditions
   await prisma.$transaction(async (tx) => {
+    if (userId) {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, totalVideosUploaded: true, billingInterval: true },
+      });
+      if (user) {
+        const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
+        const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
+        if (!check.ok) throw new Error(check.error);
+      }
+    }
     await tx.video.create({
       data: {
         id: videoId,
@@ -87,6 +80,12 @@ export async function savePendingUpload(
         data: { totalVideosUploaded: { increment: 1 } },
       });
     }
+  });
+
+  const storage = getStorage();
+  await storage.upload(fileBuffer, pendingKey, {
+    contentType: "video/mp4",
+    fileSize: fileBuffer.length,
   });
 
   return {
@@ -118,25 +117,23 @@ export async function createPendingUploadForDirectUpload(
     throw new Error("Direct upload requires STORAGE_TYPE=s3");
   }
 
-  if (userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, totalVideosUploaded: true, billingInterval: true },
-    });
-    if (user) {
-      const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
-      const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
-      if (!check.ok) throw new Error(check.error);
-    }
-  }
-
   const videoId = uuidv4();
   const ext = path.extname(originalFileName).toLowerCase();
   const pendingKey = `${PENDING_PREFIX}${videoId}${ext}`;
 
-  const uploadUrl = await storage.getPresignedPutUrl(pendingKey, contentType);
-
+  // Atomic quota check + increment inside transaction to prevent race conditions
   await prisma.$transaction(async (tx) => {
+    if (userId) {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, totalVideosUploaded: true, billingInterval: true },
+      });
+      if (user) {
+        const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
+        const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, 0, billing);
+        if (!check.ok) throw new Error(check.error);
+      }
+    }
     await tx.video.create({
       data: {
         id: videoId,
@@ -157,6 +154,8 @@ export async function createPendingUploadForDirectUpload(
       });
     }
   });
+
+  const uploadUrl = await storage.getPresignedPutUrl(pendingKey, contentType);
 
   return { videoId, uploadUrl, storageKey: pendingKey };
 }

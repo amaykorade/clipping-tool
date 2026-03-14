@@ -87,7 +87,7 @@ export async function createSubscription(params: {
     notify_info: params.notifyEmail ? { notify_email: params.notifyEmail } : undefined,
     ...(params.startAt != null && { start_at: params.startAt }),
   };
-  console.log("[Razorpay] createSubscription — keyId:", keyId, "body:", JSON.stringify(requestBody));
+  console.log("[Razorpay] createSubscription — body:", JSON.stringify(requestBody));
   const res = await fetch(`${BASE}/subscriptions`, {
     method: "POST",
     headers: {
@@ -166,5 +166,6 @@ export function verifyWebhookSignature(
 ): boolean {
   const crypto = require("crypto");
   const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  return signature === expected;
+  if (signature.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }

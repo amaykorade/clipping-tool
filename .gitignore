@@ -44,3 +44,6 @@ next-env.d.ts
 
 # user uploads (videos, rendered clips)
 /uploads
+
+# generated carousel PNGs
+/output

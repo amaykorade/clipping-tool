@@ -1,11 +1,12 @@
 import { JobType, JobStatus, VideoStatus, ClipStatus } from "@/generated/prisma";
 import {
-  startTranscriptionFromBuffer,
-  extractAudioAndStartTranscription,
+  startTranscriptionFromFile,
+  extractAudioAndStartTranscriptionFromFile,
   waitForTranscription,
 } from "@/lib/ai/transcription";
 import { prisma } from "@/lib/db";
-import { TRANSCRIBE_QUEUE_NAME, RENDER_QUEUE_NAME, VideoJobData } from "@/lib/queue";
+import { TRANSCRIBE_QUEUE_NAME, RENDER_QUEUE_NAME, VideoJobData, videoQueue } from "@/lib/queue";
+import path from "path";
 import { getStorage } from "@/lib/storage";
 import { getPlanLimits } from "@/lib/plans";
 import { finalizePendingUpload } from "@/lib/video/upload";
@@ -28,6 +29,10 @@ const connection = new IORedis(redisUrl, {
   ...(redisUrl.startsWith("rediss://") && {
     tls: { rejectUnauthorized: true },
   }),
+});
+
+connection.on("error", (err) => {
+  console.error("[Worker] Redis connection error:", err.message);
 });
 
 async function handleVideoJob(job: Job<VideoJobData>) {
@@ -67,12 +72,12 @@ async function handleVideoJob(job: Job<VideoJobData>) {
       );
       await job.updateProgress(65);
 
-      // Upload to pending storage
+      // Upload to pending storage (stream from disk to avoid OOM on large files)
       const pendingKey = `pending/${videoId}.mp4`;
       const storage = getStorage();
-      const fs = await import("fs/promises");
-      const fileBuffer = await fs.readFile(tmpPath);
-      await storage.upload(fileBuffer, pendingKey, { contentType: "video/mp4", fileSize });
+      const { createReadStream: createRS } = await import("fs");
+      const fileStream = createRS(tmpPath);
+      await storage.upload(fileStream, pendingKey, { contentType: "video/mp4", fileSize });
       await job.updateProgress(80);
 
       // Update video record
@@ -104,7 +109,6 @@ async function handleVideoJob(job: Job<VideoJobData>) {
         },
       });
 
-      const { videoQueue } = await import("@/lib/queue");
       await videoQueue.add(
         "transcribe",
         { type: JobType.TRANSCRIBE, videoId },
@@ -146,9 +150,10 @@ async function handleVideoJob(job: Job<VideoJobData>) {
       if (!video) throw new Error(`Video ${videoId} not found after finalize`);
     }
 
-    // Get the file data from storage
+    // Download video to temp file — avoids loading entire file into memory
     const storage = getStorage();
-    const fileBuffer = await storage.download(video.storageKey);
+    const tmpTranscribePath = `/tmp/${videoId}-transcribe${path.extname(video.fileName) || ".mp4"}`;
+    await storage.downloadToFile(video.storageKey, tmpTranscribePath);
 
     await job.updateProgress(10);
     await prisma.video.update({
@@ -156,11 +161,11 @@ async function handleVideoJob(job: Job<VideoJobData>) {
       data: { status: VideoStatus.TRANSCRIBING },
     });
 
-    // Start transcription job with provider (upload file data directly)
+    // Start transcription job with provider (stream file from disk)
     let externalId: string;
     let transcriptResult;
     try {
-      const { id } = await startTranscriptionFromBuffer(fileBuffer);
+      const { id } = await startTranscriptionFromFile(tmpTranscribePath);
       externalId = id;
       await job.updateProgress(30);
       transcriptResult = await waitForTranscription(externalId);
@@ -171,7 +176,7 @@ async function handleVideoJob(job: Job<VideoJobData>) {
         console.warn(
           "[Transcription] Provider reported no audio, extracting audio track and retrying...",
         );
-        const { id } = await extractAudioAndStartTranscription(fileBuffer);
+        const { id } = await extractAudioAndStartTranscriptionFromFile(tmpTranscribePath);
         externalId = id;
         await job.updateProgress(30);
         transcriptResult = await waitForTranscription(externalId);
@@ -221,13 +226,11 @@ async function handleVideoJob(job: Job<VideoJobData>) {
 
     // Generate clip suggestions (9:16 for Insta Reels, TikTok, YT Shorts).
     // Rendering is on-demand: user clicks "Create video files" or "Render clip" to queue jobs.
-    // Download video to temp file for audio energy analysis during clip scoring.
-    const tmpVideoPath = `/tmp/${videoId}-original.mp4`;
+    // Reuse the temp file from transcription for audio energy analysis during clip scoring.
     try {
-      await storage.downloadToFile(video.storageKey, tmpVideoPath);
       const clips = await generateClipsFromTranscript(videoId, {
         maxClips: 10,
-        videoFilePath: tmpVideoPath,
+        videoFilePath: tmpTranscribePath,
       });
       console.log(`[Worker] Generated ${clips.length} clips for video ${videoId} (render on demand)`);
     } catch (clipErr) {
@@ -236,7 +239,7 @@ async function handleVideoJob(job: Job<VideoJobData>) {
     } finally {
       // Clean up temp file
       const fs = await import("fs/promises");
-      fs.unlink(tmpVideoPath).catch(() => {});
+      fs.unlink(tmpTranscribePath).catch(() => {});
     }
 
     // Send email notification
@@ -375,5 +378,17 @@ if (!workerType || workerType === "render") {
   workers.push(renderWorker);
   console.log("[Worker] Listening on render queue");
 }
+
+// Graceful shutdown: let in-flight jobs finish, then close connections
+async function shutdown(signal: string) {
+  console.log(`[Worker] ${signal} received, shutting down gracefully...`);
+  await Promise.all(workers.map((w) => w.close()));
+  await connection.quit();
+  console.log("[Worker] All workers closed");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 export { workers };

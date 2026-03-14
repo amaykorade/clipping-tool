@@ -10,7 +10,8 @@
     "worker": "node --env-file=.env --require tsx/cjs src/worker/transcriptionWorker.ts",
     "worker:transcribe": "WORKER_TYPE=transcribe node --env-file=.env --require tsx/cjs src/worker/transcriptionWorker.ts",
     "worker:render": "WORKER_TYPE=render node --env-file=.env --require tsx/cjs src/worker/transcriptionWorker.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "generate-carousels": "tsx scripts/generate-carousels.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.993.0",
@@ -47,6 +48,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "prisma": "^7.3.0",
+    "puppeteer": "^24.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

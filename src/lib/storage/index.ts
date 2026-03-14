@@ -47,9 +47,18 @@ export class LocalStorage implements IStorage {
   private baseUrl: string;
 
   constructor() {
-    this.basePath = process.env.STORAGE_PATH || "./uploads";
+    this.basePath = path.resolve(process.env.STORAGE_PATH || "./uploads");
     this.baseUrl = process.env.BASE_URL || "http://localhost:3000";
     this.ensureDirectoryExists();
+  }
+
+  /** Resolve key to full path and ensure it doesn't escape basePath. */
+  private safePath(key: string): string {
+    const resolved = path.resolve(this.basePath, key);
+    if (!resolved.startsWith(this.basePath + path.sep) && resolved !== this.basePath) {
+      throw new Error("Invalid storage key");
+    }
+    return resolved;
   }
 
   private async ensureDirectoryExists() {
@@ -71,7 +80,7 @@ export class LocalStorage implements IStorage {
     key: string,
     metadata?: UploadMetadata,
   ): Promise<UploadResult> {
-    const fullPath = path.join(this.basePath, key);
+    const fullPath = this.safePath(key);
     const directory = path.dirname(fullPath);
 
     await fs.mkdir(directory, { recursive: true });
@@ -99,7 +108,7 @@ export class LocalStorage implements IStorage {
   }
 
   async download(key: string): Promise<Buffer> {
-    const fullPath = path.join(this.basePath, key);
+    const fullPath = this.safePath(key);
 
     try {
       return await fs.readFile(fullPath);
@@ -109,7 +118,7 @@ export class LocalStorage implements IStorage {
   }
 
   async downloadToFile(key: string, destPath: string): Promise<void> {
-    const fullPath = path.join(this.basePath, key);
+    const fullPath = this.safePath(key);
     await fs.copyFile(fullPath, destPath);
   }
 
@@ -119,7 +128,7 @@ export class LocalStorage implements IStorage {
   }
 
   async delete(key: string): Promise<void> {
-    const fullPath = path.join(this.basePath, key);
+    const fullPath = this.safePath(key);
 
     try {
       await fs.unlink(fullPath);
@@ -132,7 +141,7 @@ export class LocalStorage implements IStorage {
   }
 
   async exists(key: string): Promise<boolean> {
-    const fullPath = path.join(this.basePath, key);
+    const fullPath = this.safePath(key);
 
     try {
       await fs.access(fullPath);

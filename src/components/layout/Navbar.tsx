@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
+import KllivoLogo from "@/components/ui/KllivoLogo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const navLinks = [
@@ -59,7 +60,7 @@ export default function Navbar() {
           href="/"
           className="flex shrink-0 items-center gap-2 font-semibold text-slate-900 transition hover:text-purple-700 dark:text-white dark:hover:text-purple-400"
         >
-          <span className="text-xl tracking-tight">Kllivo</span>
+          <KllivoLogo size="md" showText textClassName="text-xl tracking-tight" />
         </Link>
 
         {/* Desktop nav */}

@@ -74,20 +74,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fast path: save to pending storage only; worker will do ffmpeg + finalize
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const result = await savePendingUpload({
-      title: validation.data.title,
-      originalFileName: file.name,
-      fileBuffer: buffer,
-      userId: user.id,
-    });
-
     const priority = userWithPlan ? getPlanLimits(userWithPlan.plan).jobPriority : 1;
 
-    // Check concurrent job limit
+    // Check concurrent job limit before saving file
     const activeJobs = await prisma.job.count({
       where: {
         video: { userId: user.id },
@@ -100,6 +89,17 @@ export async function POST(request: NextRequest) {
         { status: 429 },
       );
     }
+
+    // Fast path: save to pending storage only; worker will do ffmpeg + finalize
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const result = await savePendingUpload({
+      title: validation.data.title,
+      originalFileName: file.name,
+      fileBuffer: buffer,
+      userId: user.id,
+    });
 
     // Create Job row with same id as BullMQ job id later
     const dbJob = await prisma.job.create({

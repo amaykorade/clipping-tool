@@ -1,4 +1,5 @@
 import type { CompetitorFeature } from "@/data/competitors";
+import KllivoLogo from "@/components/ui/KllivoLogo";
 
 function CellValue({ value, highlight }: { value: string | boolean; highlight?: boolean }) {
   if (value === true) {
@@ -51,8 +52,7 @@ export function ComparisonTable({
             <th className="relative px-5 py-4 text-left">
               <div className="absolute inset-0 bg-gradient-to-b from-purple-50 to-purple-50/30 dark:from-purple-950/40 dark:to-purple-950/10" />
               <span className="relative flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-700 text-[10px] font-black text-white dark:bg-purple-600">K</span>
-                Kllivo
+                <KllivoLogo size="sm" showText textClassName="text-xs font-bold uppercase tracking-wider" />
               </span>
             </th>
             <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -107,8 +107,7 @@ export function HubComparisonTable({
             <th className="relative px-5 py-4 text-left">
               <div className="absolute inset-0 bg-gradient-to-b from-purple-50 to-purple-50/30 dark:from-purple-950/40 dark:to-purple-950/10" />
               <span className="relative flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-700 text-[10px] font-black text-white dark:bg-purple-600">K</span>
-                Kllivo
+                <KllivoLogo size="sm" showText textClassName="text-xs font-bold uppercase tracking-wider" />
               </span>
             </th>
             {competitors.map((c) => (

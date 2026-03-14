@@ -60,13 +60,6 @@ export async function POST(
       outputUrl: clip.outputUrl,
     });
   }
-  if (clip.status === "COMPLETED" && preset) {
-    // Reset to PENDING so it can be re-rendered with the new preset
-    await prisma.clip.update({
-      where: { id },
-      data: { status: "PENDING", outputUrl: null, thumbnailUrl: null },
-    });
-  }
 
   try {
     // Check concurrent job limit
@@ -85,17 +78,26 @@ export async function POST(
       }
     }
 
-    const { videoQueue } = await import("@/lib/queue");
-    const dbJob = await prisma.job.create({
-      data: {
-        type: JobType.GENERATE_CLIP,
-        status: JobStatus.QUEUED,
-        videoId: clip.videoId,
-        clipId: clip.id,
-        progress: 0,
-      },
+    // Atomic: reset clip status + create job in one transaction
+    const dbJob = await prisma.$transaction(async (tx) => {
+      if (clip.status === "COMPLETED" && preset) {
+        await tx.clip.update({
+          where: { id },
+          data: { status: "PENDING", outputUrl: null, thumbnailUrl: null },
+        });
+      }
+      return tx.job.create({
+        data: {
+          type: JobType.GENERATE_CLIP,
+          status: JobStatus.QUEUED,
+          videoId: clip.videoId,
+          clipId: clip.id,
+          progress: 0,
+        },
+      });
     });
 
+    const { videoQueue } = await import("@/lib/queue");
     const priority = clip.video?.user ? getPlanLimits(clip.video.user.plan as Plan).jobPriority : 3;
     await videoQueue.add(
       "generate-clip",

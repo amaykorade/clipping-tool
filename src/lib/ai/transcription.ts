@@ -2,6 +2,7 @@ import { Transcript, TranscriptWord } from "assemblyai";
 import axios from "axios";
 import { withCircuitBreaker } from "@/lib/circuitBreaker";
 import ffmpeg from "fluent-ffmpeg";
+import { createReadStream } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -98,6 +99,67 @@ export async function extractAudioAndStartTranscription(
 
   // Now start transcription from the extracted audio buffer
   return startTranscriptionFromBuffer(audioBuffer);
+}
+
+/** Stream file from disk to AssemblyAI — avoids loading entire video into memory. */
+export async function startTranscriptionFromFile(
+  filePath: string,
+): Promise<TranscriptionJob> {
+  const { stat } = await import("fs/promises");
+  const fileStats = await stat(filePath);
+  const stream = createReadStream(filePath);
+  const uploadRes = await axios.post(
+    `${ASSEMBLY_API_URL}/upload`,
+    stream,
+    {
+      headers: {
+        authorization: API_KEY,
+        "content-type": "application/octet-stream",
+        "content-length": fileStats.size.toString(),
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    },
+  );
+
+  const uploadUrl: string = uploadRes.data.upload_url;
+
+  const res = await axios.post(
+    `${ASSEMBLY_API_URL}/transcript`,
+    {
+      audio_url: uploadUrl,
+      speaker_labels: true,
+      punctuate: true,
+      format_text: true,
+    },
+    { headers: { authorization: API_KEY } },
+  );
+
+  return { id: res.data.id, status: res.data.status };
+}
+
+/** Extract audio from file on disk and stream to AssemblyAI — avoids loading video into memory. */
+export async function extractAudioAndStartTranscriptionFromFile(
+  filePath: string,
+): Promise<TranscriptionJob> {
+  const id = uuidv4();
+  const outputPath = path.join("/tmp", `transcribe-audio-${id}.wav`);
+
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg(filePath)
+      .noVideo()
+      .audioCodec("pcm_s16le")
+      .format("wav")
+      .on("end", () => resolve())
+      .on("error", (err) => reject(err))
+      .save(outputPath);
+  });
+
+  try {
+    return await startTranscriptionFromFile(outputPath);
+  } finally {
+    await fs.unlink(outputPath).catch(() => {});
+  }
 }
 
 // Legacy function kept for potential future external URLs
