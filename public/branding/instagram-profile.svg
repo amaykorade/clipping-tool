@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1080" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <!-- Subtle inner glow for depth -->
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background: full square with rounded corners (Instagram crops to circle) -->
+  <rect width="1080" height="1080" rx="220" fill="url(#bg)"/>
+  <!-- Subtle glow overlay -->
+  <rect width="1080" height="1080" rx="220" fill="url(#glow)"/>
+
+  <!-- "K" mark — centered in the safe circle area (inset ~15% from edges) -->
+  <!-- Scaled up from 512 to 1080: factor ~2.109, then centered -->
+  <path
+    d="M354 270v540M354 540l320-270M354 540l320 270"
+    stroke="#fff"
+    stroke-width="108"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

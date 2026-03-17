@@ -12,6 +12,8 @@ npm run lint         # ESLint (v9 flat config)
 npm run worker            # BullMQ worker — both queues (dev default)
 npm run worker:transcribe # Only transcription queue (API-bound)
 npm run worker:render     # Only render queue (CPU-bound)
+npx prisma generate       # Regenerate Prisma client after schema changes
+npx prisma migrate dev    # Create + apply migration after schema changes
 ```
 
 Build requires `prisma generate` first (handled automatically by build script and postinstall). No test framework is configured — there are no tests in this project.
@@ -74,13 +76,15 @@ Build requires `prisma generate` first (handled automatically by build script an
 - **Error mapping**: `toUserFriendlyError()` and `getSafeApiErrorMessage()` in `src/lib/errorMessages.ts` — never expose internal errors (Redis, API keys) to users
 - **Prisma singleton**: `src/lib/db/index.ts` — uses driver adapter pattern for serverless compatibility
 - **Lazy Redis**: Queue connection only initialized on first job enqueue (supports static builds)
-- **Video status flow**: UPLOADED → TRANSCRIBING → ANALYZING → READY (or ERROR)
+- **Video status flow**: DOWNLOADING → UPLOADED → TRANSCRIBING → ANALYZING → READY (or ERROR). DOWNLOADING is for YouTube URL imports only; direct uploads start at UPLOADED
 - **Clip status flow**: PENDING → PROCESSING → COMPLETED (or ERROR)
 - **Zod validation**: Used for runtime schema validation on API inputs
 - **Rate limiting**: In-memory sliding window per user (`src/lib/rateLimit.ts`) on upload, render, download, subscription endpoints
 - **Webhook idempotency**: `WebhookEvent` model prevents duplicate Razorpay webhook processing
 - **File validation**: Extension whitelist + MIME type checks on both upload paths
 - **Circuit breaker**: `src/lib/circuitBreaker.ts` wraps AssemblyAI and OpenAI calls — opens after 5 failures, 60s cooldown
+- **Clip editor**: Clips have optional `edited*` fields (start/end time, caption edits, position, scale, color) that override AI-generated values when present. Null = use original
+- **Aspect ratios**: VERTICAL (9:16), SQUARE (1:1), LANDSCAPE (16:9) — stored as `AspectRatio` enum on Clip
 - **Dark mode**: Class-based toggle with localStorage persistence (Tailwind v4 `@custom-variant dark`)
 
 ## Environment Variables

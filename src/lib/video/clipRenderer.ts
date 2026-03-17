@@ -39,11 +39,15 @@ export async function renderAndUploadClip(
     const inputPath = path.join("/tmp", `${video.id}-original.mp4`);
     await storage.downloadToFile(video.storageKey, inputPath);
 
+    // Use edited times if user has trimmed, otherwise use AI-generated times
+    const rawStartTime = clip.editedStartTime ?? clip.startTime;
+    const rawEndTime = clip.editedEndTime ?? clip.endTime;
+
     // Clamp clip times to actual file duration to avoid ffmpeg "Conversion failed" (exit 234)
     const fileInfo = await getVideoInfo(inputPath);
     const durationSec = fileInfo.duration;
-    let startTime = Math.max(0, Math.min(clip.startTime, durationSec - MIN_CLIP_DURATION_SEC));
-    let endTime = Math.min(durationSec, Math.max(clip.endTime, startTime + MIN_CLIP_DURATION_SEC));
+    let startTime = Math.max(0, Math.min(rawStartTime, durationSec - MIN_CLIP_DURATION_SEC));
+    let endTime = Math.min(durationSec, Math.max(rawEndTime, startTime + MIN_CLIP_DURATION_SEC));
     if (endTime - startTime < MIN_CLIP_DURATION_SEC) {
       endTime = Math.min(durationSec, startTime + MIN_CLIP_DURATION_SEC);
     }
@@ -52,13 +56,24 @@ export async function renderAndUploadClip(
     const outputFileName = `${uuidv4()}.mp4`;
     const outputPath = path.join("/tmp", outputFileName);
 
-    // Get transcript words for captions
+    // Get transcript words for captions, applying any user edits
     const transcript = video.transcript as any;
-    const clipWords = extractClipWords(
+    let clipWords = extractClipWords(
       transcript?.words || [],
       startTime,
       endTime,
     );
+
+    // Apply caption edits (user-corrected words)
+    if (clip.captionEdits && typeof clip.captionEdits === "object") {
+      const edits = clip.captionEdits as Record<string, string>;
+      const allWords = transcript?.words || [];
+      clipWords = clipWords.map((w: { text: string; start: number; end: number }) => {
+        const idx = allWords.findIndex((aw: { start: number; end: number }) => aw.start === w.start && aw.end === w.end);
+        const editedText = edits[String(idx)];
+        return editedText !== undefined ? { ...w, text: editedText } : w;
+      });
+    }
 
     const userRecord = clip.video.user;
     const plan = userRecord?.plan ?? "FREE";
@@ -75,12 +90,17 @@ export async function renderAndUploadClip(
       crop: {
         aspectRatio,
         position: "center",
+        cropMode: clip.cropMode === "FIT" ? "fit" : "fill",
       },
       captions:
-        clipWords.length > 0
+        clipWords.length > 0 && !!clip.captionStyle && clip.captionStyle !== "none"
           ? {
-              style: "modern",
+              style: (clip.captionStyle || "modern") as "default" | "bold" | "modern",
               words: clipWords,
+              positionX: clip.captionPositionX ?? undefined,
+              positionY: clip.captionPositionY ?? undefined,
+              scale: clip.captionScale ?? undefined,
+              activeColor: clip.captionColor ?? undefined,
             }
           : undefined,
       watermark: addWatermark,

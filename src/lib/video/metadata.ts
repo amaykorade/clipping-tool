@@ -77,7 +77,6 @@ export async function generateThumbnail(
         timemarks: [timestampSeconds],
         filename,
         folder,
-        size: "1280x720",
       })
       .on("end", () => resolve())
       .on("error", (err) => reject(err));

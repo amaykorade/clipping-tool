@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
+import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { VideoDetailSkeleton } from "@/components/ui/Skeleton";
@@ -460,19 +461,19 @@ export default function VideoDetailPage({
                     className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg hover:border-purple-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-600"
                   >
                     <div className={`relative ${getAspectClass(c.aspectRatio ?? undefined)} w-full overflow-hidden bg-slate-900`}>
-                      {c.thumbnailUrl ? (
-                        <img
-                          src={toSameOriginUrl(c.thumbnailUrl)}
-                          alt={c.title}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        />
-                      ) : c.outputUrl ? (
+                      {c.outputUrl ? (
                         <video
                           src={toSameOriginUrl(c.outputUrl)}
                           preload="metadata"
                           muted
                           playsInline
                           className="h-full w-full object-cover"
+                        />
+                      ) : c.thumbnailUrl ? (
+                        <img
+                          src={toSameOriginUrl(c.thumbnailUrl)}
+                          alt={c.title}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                         />
                       ) : null}
                       {/* Hover overlay */}
@@ -510,6 +511,16 @@ export default function VideoDetailPage({
                     <div className="px-3 py-2.5">
                       <h4 className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2 dark:text-white">{c.title}</h4>
                       <div className="mt-2 flex items-center gap-1.5">
+                        <Link
+                          href={`/videos/${id}/clips/${c.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center justify-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-[11px] font-medium text-purple-700 transition hover:bg-purple-100 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:bg-purple-950/50"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </Link>
                         <a
                           href={`/api/clips/${c.id}/download`}
                           download
@@ -658,9 +669,7 @@ export default function VideoDetailPage({
           <div
             role="dialog"
             aria-modal="true"
-            className={`relative mx-4 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800 ${
-              selectedClip.aspectRatio === "LANDSCAPE" ? "max-w-2xl" : selectedClip.aspectRatio === "SQUARE" ? "max-w-md" : "max-w-sm"
-            }`}
+            className="relative mx-4 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button — floating */}
@@ -674,9 +683,10 @@ export default function VideoDetailPage({
               </svg>
             </button>
 
-            {/* Video player */}
-            <div className="relative flex-1 overflow-y-auto">
-              <div className="relative bg-black">
+            {/* Content: side-by-side on md+, stacked on mobile */}
+            <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+              {/* Left: Video player */}
+              <div className="flex shrink-0 items-center justify-center bg-black md:w-1/2">
                 <video
                   key={selectedClip.id}
                   src={toSameOriginUrl(selectedClip.outputUrl)}
@@ -684,12 +694,12 @@ export default function VideoDetailPage({
                   autoPlay
                   preload="metadata"
                   playsInline
-                  className={`${getAspectClass(selectedClip.aspectRatio ?? undefined)} w-full object-contain`}
+                  className="max-h-[50vh] w-full object-contain md:max-h-[85vh]"
                   onError={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: true }))}
                   onLoadedData={() => setVideoErrors((prev) => ({ ...prev, [selectedClip.id]: false }))}
                 />
                 {videoErrors[selectedClip.id] && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/90 p-4 text-center text-sm text-white">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/90 p-4 text-center text-sm text-white md:inset-auto md:left-0 md:w-1/2">
                     <span>Video could not load.</span>
                     <a href={toSameOriginUrl(selectedClip.outputUrl!)} target="_blank" rel="noopener noreferrer" className="font-medium text-purple-400 underline">
                       Open in new tab
@@ -698,11 +708,11 @@ export default function VideoDetailPage({
                 )}
               </div>
 
-              {/* Info + actions */}
-              <div className="space-y-3 p-4">
+              {/* Right: Info panel */}
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
                 <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">{selectedClip.title}</h3>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{selectedClip.title}</h3>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                     <span>{selectedClip.startTime.toFixed(1)}s – {selectedClip.endTime.toFixed(1)}s</span>
                     {selectedClip.confidence != null && <span>{(selectedClip.confidence * 100).toFixed(0)}% match</span>}
                     {selectedClip.speaker && <span>Speaker {selectedClip.speaker}</span>}
@@ -714,6 +724,15 @@ export default function VideoDetailPage({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
+                  <Link
+                    href={`/videos/${id}/clips/${selectedClip.id}/edit`}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2.5 text-sm font-semibold text-purple-700 shadow-sm transition hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:bg-purple-950/50"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </Link>
                   <a
                     href={`/api/clips/${selectedClip.id}/download`}
                     download
@@ -752,10 +771,10 @@ export default function VideoDetailPage({
 
                 {/* Transcript */}
                 {transcriptData && getClipTranscriptText(selectedClip) && (
-                  <div>
+                  <div className="flex-1">
                     <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Transcript</p>
-                    <div className="max-h-28 overflow-y-auto rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50">
-                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{getClipTranscriptText(selectedClip)}</p>
+                    <div className="overflow-y-auto rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50 md:max-h-[40vh]">
+                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{getClipTranscriptText(selectedClip)}</p>
                     </div>
                   </div>
                 )}

@@ -52,15 +52,6 @@ export async function POST(
     }
   }
 
-  // Allow re-rendering in a different format; skip if same format already rendered
-  if (clip.status === "COMPLETED" && !preset) {
-    return NextResponse.json({
-      success: true,
-      message: "Clip already rendered",
-      outputUrl: clip.outputUrl,
-    });
-  }
-
   try {
     // Check concurrent job limit
     if (clip.video.userId) {
@@ -80,7 +71,8 @@ export async function POST(
 
     // Atomic: reset clip status + create job in one transaction
     const dbJob = await prisma.$transaction(async (tx) => {
-      if (clip.status === "COMPLETED" && preset) {
+      // Reset status so the clip gets re-rendered with latest edits
+      if (clip.status === "COMPLETED") {
         await tx.clip.update({
           where: { id },
           data: { status: "PENDING", outputUrl: null, thumbnailUrl: null },
