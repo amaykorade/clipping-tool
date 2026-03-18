@@ -18,6 +18,8 @@ npx prisma migrate dev    # Create + apply migration after schema changes
 
 Build requires `prisma generate` first (handled automatically by build script and postinstall). No test framework is configured — there are no tests in this project.
 
+System dependencies: `ffmpeg` (with libfreetype for captions when `ENABLE_FFMPEG_CAPTIONS=1`), `yt-dlp` (for YouTube imports).
+
 ## Architecture
 
 **Clipflow (Kllivo)** is a Next.js 16 App Router SaaS that transforms long-form videos into short-form clips using AI. TypeScript throughout.
@@ -36,18 +38,38 @@ Build requires `prisma generate` first (handled automatically by build script an
 
 ### AI Pipeline (sequential)
 1. **AssemblyAI** → speech-to-text with speaker labels
-2. **Semantic segmentation** → topic boundary detection
-3. **GPT-4o-mini** → clip scoring, title generation
-4. **Clip refinement** → merge overlapping, extend to sentence boundaries
-5. **FFmpeg** → render 9:16 vertical clips with captions
+2. **Audio energy analysis** → per-segment RMS loudness via FFmpeg `astats` filter (`src/lib/ai/audioEnergy.ts`)
+3. **Semantic segmentation** → topic boundary detection
+4. **GPT-4o-mini** → clip scoring, title generation (with energy tags as context)
+5. **Clip refinement** → merge overlapping, extend to sentence boundaries, deduplication
+6. **FFmpeg** → render clips with aspect ratio cropping/scaling
 
 ### Two-Phase Upload Pattern
 - **Fast path** (API): Save file to pending storage, create Video record, respond immediately
 - **Slow path** (Worker): Finalize, extract metadata via FFmpeg, run AI pipeline
+- **YouTube import**: Validates URL → creates Video with DOWNLOADING status → worker downloads via `yt-dlp` → transitions to UPLOADED → continues normal pipeline
+
+### Clip Editor Flow
+- Editor page at `/videos/[id]/clips/[clipId]/edit` with `ClipEditor` component
+- State managed by `useEditorState` reducer (undo/redo stack, dirty tracking)
+- Video playback synced via `usePlaybackSync` hook
+- Waveform visualization via `useWaveform` hook + `/api/videos/[id]/waveform` endpoint
+- **Save = Save + Re-render** in one step. Download only available after render completes
+- Captions default to **none** — user enables from editor if desired
+- Edits stored as `edited*` fields on Clip model (null = use AI-generated original)
+
+### Clip Rendering (`src/lib/video/processing.ts`)
+- **Fill mode** (default): Center-crops source to target aspect ratio, scales to output resolution
+- **Fit mode**: Blurred background + centered video (no crop), uses complex FFmpeg filter graph
+- Output resolutions: 1080x1920 (9:16), 1080x1080 (1:1), 1920x1080 (16:9)
+- Caption overlay via FFmpeg drawtext (requires `ENABLE_FFMPEG_CAPTIONS=1`)
+- 6 caption styles: none, modern, bold, minimal, karaoke, outline
+- Platform presets in `src/lib/video/presets.ts` (TikTok, Instagram, YouTube, Twitter, LinkedIn)
 
 ### Storage Abstraction (`src/lib/storage/index.ts`)
 - `IStorage` interface with Local and S3 implementations
 - `STORAGE_TYPE` env var switches between them
+- `downloadToFile()` for streaming large files to disk (used by worker)
 - S3 mode uses presigned URLs for direct browser uploads
 - Local mode serves files via `/upload/[...path]` catch-all route
 
@@ -56,16 +78,19 @@ Build requires `prisma generate` first (handled automatically by build script an
 - Yearly billing = 10 months price for 12 months
 - Pending plan switches take effect at cycle end
 - `totalVideosUploaded` is lifetime counter (deletes don't reduce it)
+- PRO features: custom watermark upload, position/opacity control
 
 ## Key Directories
 
-- `src/app/api/` — API routes (videos, clips, subscription, webhooks)
-- `src/lib/ai/` — AI integrations (transcription, scoring, segmentation, refinement)
-- `src/lib/video/` — Upload handling, metadata extraction, clip rendering (FFmpeg)
+- `src/app/api/` — API routes (videos, clips, subscription, webhooks, branding, analytics, presets)
+- `src/lib/ai/` — AI integrations (transcription, scoring, segmentation, refinement, audio energy)
+- `src/lib/video/` — Upload handling, metadata extraction, clip rendering, waveform generation, YouTube download
 - `src/lib/storage/` — Storage abstraction (Local/S3)
 - `src/lib/queue/` — BullMQ setup with lazy Redis connection
 - `src/lib/email/` — Notification emails (video ready, clips rendered, quota warning)
 - `src/worker/` — Background job worker (transcription, clip generation)
+- `src/components/editor/` — Clip editor UI (VideoPreview, Timeline, TrimHandle, CaptionEditor, style/color/aspect/crop pickers)
+- `src/components/compare/` — Competitor comparison page components
 - `prisma/schema.prisma` — Database schema (User, Account, Session, Video, Clip, Job, WebhookEvent)
 
 ## Key Patterns
@@ -85,8 +110,11 @@ Build requires `prisma generate` first (handled automatically by build script an
 - **Circuit breaker**: `src/lib/circuitBreaker.ts` wraps AssemblyAI and OpenAI calls — opens after 5 failures, 60s cooldown
 - **Clip editor**: Clips have optional `edited*` fields (start/end time, caption edits, position, scale, color) that override AI-generated values when present. Null = use original
 - **Aspect ratios**: VERTICAL (9:16), SQUARE (1:1), LANDSCAPE (16:9) — stored as `AspectRatio` enum on Clip
+- **Crop modes**: FILL (center-crop) and FIT (blur background + fit) — stored as `CropMode` enum on Clip
 - **Dark mode**: Class-based toggle with localStorage persistence (Tailwind v4 `@custom-variant dark`)
+- **Icons**: Custom inline SVGs throughout (no icon library). Use `h-N w-N`, `fill="none"`, `stroke="currentColor"`, `strokeWidth={1.5}` to match
+- **No external icon libraries**: All icons are hand-written SVG elements
 
 ## Environment Variables
 
-Required for local dev: `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ASSEMBLYAI_API_KEY`, `OPENAI_API_KEY`, `STORAGE_TYPE` (local/s3), `STORAGE_PATH`. Razorpay keys needed for billing. See `.env` for full list.
+Required for local dev: `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ASSEMBLYAI_API_KEY`, `OPENAI_API_KEY`, `STORAGE_TYPE` (local/s3), `STORAGE_PATH`. Razorpay keys needed for billing. `ENABLE_FFMPEG_CAPTIONS=1` to enable caption rendering. See `.env` for full list.

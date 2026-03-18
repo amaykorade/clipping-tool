@@ -116,6 +116,7 @@ export default async function Home({
 
   const useCases = [
     {
+      slug: "podcasters",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
@@ -125,6 +126,7 @@ export default async function Home({
       description: "Turn 60-minute episodes into 10 shareable clips. Grow your audience on short-form without re-recording anything.",
     },
     {
+      slug: "coaches",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
@@ -134,6 +136,7 @@ export default async function Home({
       description: "Repurpose keynotes, workshops and webinars into bite-sized clips that showcase your expertise.",
     },
     {
+      slug: "youtubers",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -143,6 +146,7 @@ export default async function Home({
       description: "Extract the best moments from long vlogs and tutorials. Drive traffic back to your full videos.",
     },
     {
+      slug: "agencies",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
@@ -413,11 +417,17 @@ export default async function Home({
         </div>
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {useCases.map((uc) => (
-            <div key={uc.title} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-purple-200 hover:shadow-sm transition dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-800">
+            <Link key={uc.title} href={`/use/${uc.slug}`} className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:border-purple-200 hover:shadow-sm transition dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-800">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{uc.icon}</div>
               <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">{uc.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{uc.description}</p>
-            </div>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-purple-700 transition group-hover:gap-2 dark:text-purple-400">
+                Learn more
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </span>
+            </Link>
           ))}
         </div>
       </section>
@@ -640,7 +650,7 @@ export default async function Home({
       <footer className="mt-24 sm:mt-32">
         <div className="relative left-1/2 w-[100vw] -translate-x-1/2 bg-slate-900 px-6 py-16 sm:px-8 sm:py-20">
           <div className="mx-auto max-w-5xl">
-            <div className="grid gap-10 border-b border-slate-700/60 pb-12 sm:grid-cols-4 sm:pb-14">
+            <div className="grid gap-10 border-b border-slate-700/60 pb-12 sm:grid-cols-5 sm:pb-14">
               <div className="sm:col-span-2">
                 <Link href="/" className="text-white">
                   <KllivoLogo size="md" showText textClassName="text-xl font-bold tracking-tight text-white" />
@@ -656,6 +666,14 @@ export default async function Home({
                   <li><Link href="/videos" className="text-sm text-slate-400 transition hover:text-white">My videos</Link></li>
                   <li><Link href="/pricing" className="text-sm text-slate-400 transition hover:text-white">Pricing</Link></li>
                   <li><a href="#how-it-works" className="text-sm text-slate-400 transition hover:text-white">How it works</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</h4>
+                <ul className="mt-4 space-y-3">
+                  <li><Link href="/use" className="text-sm text-slate-400 transition hover:text-white">Use cases</Link></li>
+                  <li><Link href="/how-to" className="text-sm text-slate-400 transition hover:text-white">How-to guides</Link></li>
+                  <li><Link href="/clips-for" className="text-sm text-slate-400 transition hover:text-white">Platforms</Link></li>
                   <li><Link href="/compare" className="text-sm text-slate-400 transition hover:text-white">Compare</Link></li>
                 </ul>
               </div>

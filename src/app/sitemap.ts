@@ -2,6 +2,9 @@ import { MetadataRoute } from "next";
 import { getBaseUrl } from "@/lib/seo";
 import { prisma } from "@/lib/db";
 import { getAllCompetitorSlugs } from "@/data/competitors";
+import { getAllUseCaseSlugs } from "@/data/useCases";
+import { getAllHowToSlugs } from "@/data/howTo";
+import { getAllPlatformSlugs } from "@/data/platforms";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();
@@ -15,6 +18,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },
     ...getAllCompetitorSlugs().map((slug) => ({
       url: `${baseUrl}/compare/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
+    { url: `${baseUrl}/use`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.85 },
+    ...getAllUseCaseSlugs().map((slug) => ({
+      url: `${baseUrl}/use/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
+    { url: `${baseUrl}/how-to`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.85 },
+    ...getAllHowToSlugs().map((slug) => ({
+      url: `${baseUrl}/how-to/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
+    { url: `${baseUrl}/clips-for`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.85 },
+    ...getAllPlatformSlugs().map((slug) => ({
+      url: `${baseUrl}/clips-for/${slug}`,
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: 0.8,
