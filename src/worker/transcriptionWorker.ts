@@ -363,6 +363,7 @@ if (!workerType || workerType === "transcribe") {
   const transcribeWorker = new Worker<VideoJobData>(TRANSCRIBE_QUEUE_NAME, jobHandler, {
     connection,
     concurrency: 2,
+    drainDelay: 30,
   });
   attachListeners(transcribeWorker, "Transcribe");
   workers.push(transcribeWorker);
@@ -373,6 +374,7 @@ if (!workerType || workerType === "render") {
   const renderWorker = new Worker<VideoJobData>(RENDER_QUEUE_NAME, jobHandler, {
     connection,
     concurrency: 3,
+    drainDelay: 30,
   });
   attachListeners(renderWorker, "Render");
   workers.push(renderWorker);
