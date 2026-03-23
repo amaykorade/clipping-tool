@@ -22,9 +22,13 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [uploadStrategy, setUploadStrategy] = useState<UploadStrategy>("direct");
   const [maxFileSize, setMaxFileSize] = useState<number>(500 * 1024 * 1024);
   const [maxFileSizeLabel, setMaxFileSizeLabel] = useState<string>("500 MB");
+  const [videosUsed, setVideosUsed] = useState<number>(0);
+  const [videosMax, setVideosMax] = useState<number>(1);
+  const [planLabel, setPlanLabel] = useState<string>("Free");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = uploading || importing;
+  const quotaReached = videosUsed >= videosMax;
 
   useEffect(() => {
     fetch("/api/video/upload")
@@ -33,6 +37,9 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
         setUploadStrategy(d.uploadStrategy || "direct");
         setMaxFileSize(d.maxFileSize ?? 500 * 1024 * 1024);
         setMaxFileSizeLabel(d.maxFileSizeLabel ?? "500 MB");
+        setVideosUsed(d.videosUsed ?? 0);
+        setVideosMax(d.videosMax ?? 1);
+        setPlanLabel(d.planLabel ?? "Free");
       })
       .catch(() => {});
   }, []);
@@ -190,6 +197,26 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      {/* Quota banner */}
+      {quotaReached ? (
+        <div className="rounded-t-2xl border-b border-red-200 bg-red-50 px-6 py-4 dark:border-red-800/50 dark:bg-red-950/40">
+          <p className="text-sm font-medium text-red-800 dark:text-red-300">
+            You&apos;ve used all {videosMax} video{videosMax === 1 ? "" : "s"} on your {planLabel} plan.{" "}
+            <a href="/pricing" className="font-semibold underline underline-offset-2 hover:text-red-900 dark:hover:text-red-200">
+              Upgrade to upload more
+            </a>
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-t-2xl border-b border-slate-100 bg-slate-50/50 px-6 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {videosUsed} of {videosMax} video{videosMax === 1 ? "" : "s"} used this cycle
+            <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+            {planLabel} plan
+          </p>
+        </div>
+      )}
+
       {/* Mode toggle */}
       <div className="flex gap-1 border-b border-slate-200 px-6 pt-6 sm:px-8 sm:pt-8 dark:border-slate-700">
         <button
@@ -390,6 +417,7 @@ export default function UploadForm({ onUploadComplete }: UploadFormProps) {
             type="submit"
             disabled={
               busy ||
+              quotaReached ||
               (mode === "file" ? !file || !title : !youtubeUrl.trim())
             }
             className="w-full rounded-xl bg-purple-700 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"

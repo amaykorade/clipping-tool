@@ -2,7 +2,7 @@ import { JobStatus, JobType } from "@/generated/prisma";
 import { getSession, requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSafeApiErrorMessage } from "@/lib/errorMessages";
-import { formatFileSize, getMaxUploadSizeBytes, getNextPlanWithHigherUpload, getPlanLimits, MAX_ACTIVE_JOBS_PER_USER } from "@/lib/plans";
+import { formatFileSize, getMaxUploadSizeBytes, getMaxVideosForCycle, getNextPlanWithHigherUpload, getPlanLimits, MAX_ACTIVE_JOBS_PER_USER } from "@/lib/plans";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 import { savePendingUpload } from "@/lib/video/upload";
 import { NextRequest, NextResponse } from "next/server";
@@ -143,14 +143,23 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   const storageType = process.env.STORAGE_TYPE || "local";
   let maxFileSize = getMaxUploadSizeBytes("FREE");
+  let videosUsed = 0;
+  let videosMax = 1;
+  let planLabel = "Free";
   try {
     const session = await getSession();
     if (session?.user?.id) {
-      const rows = await prisma.$queryRaw<{ plan: string }[]>`
-        SELECT plan FROM "User" WHERE id = ${session.user.id}
-      `;
-      const plan = (rows?.[0]?.plan ?? "FREE") as "FREE" | "STARTER" | "PRO";
-      maxFileSize = getMaxUploadSizeBytes(plan);
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { plan: true, totalVideosUploaded: true, billingInterval: true },
+      });
+      if (user) {
+        const plan = (user.plan ?? "FREE") as "FREE" | "STARTER" | "PRO";
+        maxFileSize = getMaxUploadSizeBytes(plan);
+        videosUsed = user.totalVideosUploaded;
+        videosMax = getMaxVideosForCycle(plan, (user.billingInterval as "monthly" | "yearly" | null) ?? null);
+        planLabel = getPlanLimits(plan).label;
+      }
     }
   } catch {
     // Fallback to FREE limit
@@ -159,6 +168,9 @@ export async function GET() {
     uploadStrategy: storageType === "s3" ? "presigned" : "direct",
     maxFileSize,
     maxFileSizeLabel: formatFileSize(maxFileSize),
+    videosUsed,
+    videosMax,
+    planLabel,
     allowedTypes: [
       "video/mp4",
       "video/quicktime",
