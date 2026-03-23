@@ -4,7 +4,7 @@ import path from "path";
 import { getStorage, isS3Storage } from "../storage";
 import fs from "fs/promises";
 import { prisma } from "../db";
-import { canUploadVideo } from "../plans";
+import { canUploadVideo, getPlanLimits } from "../plans";
 
 /** Options for fast path: API only saves file to pending, worker does the rest. */
 export interface SavePendingOptions {
@@ -180,22 +180,23 @@ export async function finalizePendingUpload(videoId: string): Promise<void> {
     }
     const metadata = validation.metadata!;
 
+    // Check duration against plan limit (count was already validated in savePendingUpload)
     if (video.userId) {
       const user = await prisma.user.findUnique({
         where: { id: video.userId },
-        select: { plan: true, totalVideosUploaded: true, billingInterval: true },
+        select: { plan: true },
       });
       if (user) {
         const durationSec = Math.ceil(metadata.duration);
-        const billing = (user.billingInterval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly" | null;
-        const check = canUploadVideo(user.plan as "FREE" | "STARTER" | "PRO", user.totalVideosUploaded, durationSec, billing);
-        if (!check.ok) {
-          // Revert the increment from create (video will remain but user gets slot back)
+        const limits = getPlanLimits(user.plan as "FREE" | "STARTER" | "PRO");
+        if (durationSec > limits.maxDurationSec) {
+          const maxMin = Math.floor(limits.maxDurationSec / 60);
+          // Revert the increment from savePendingUpload (video will remain but user gets slot back)
           await prisma.user.update({
             where: { id: video.userId },
             data: { totalVideosUploaded: { decrement: 1 } },
           });
-          throw new Error(check.error);
+          throw new Error(`Video must be ${maxMin} minutes or less on your plan. Upgrade for longer videos.`);
         }
       }
     }
