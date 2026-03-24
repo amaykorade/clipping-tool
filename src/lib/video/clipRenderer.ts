@@ -35,9 +35,14 @@ export async function renderAndUploadClip(
   try {
     const storage = getStorage();
 
-    // Download original video to temp location
+    // Download original video to temp location (reuse cached file if available)
     const inputPath = path.join("/tmp", `${video.id}-original.mp4`);
-    await storage.downloadToFile(video.storageKey, inputPath);
+    const { existsSync } = await import("fs");
+    if (existsSync(inputPath)) {
+      console.log(`[ClipRenderer] Reusing cached video at ${inputPath}`);
+    } else {
+      await storage.downloadToFile(video.storageKey, inputPath);
+    }
 
     // Use edited times if user has trimmed, otherwise use AI-generated times
     const rawStartTime = clip.editedStartTime ?? clip.startTime;
@@ -147,8 +152,7 @@ export async function renderAndUploadClip(
       },
     });
 
-    // Cleanup temp files
-    await fs.unlink(inputPath).catch(() => {});
+    // Cleanup temp files (keep inputPath cached for other clips from same video)
     await fs.unlink(outputPath).catch(() => {});
 
     console.log(`[ClipRenderer] Rendered clip ${clipId}`);
