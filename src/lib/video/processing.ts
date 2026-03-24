@@ -117,7 +117,7 @@ export async function renderClip(options: RenderClipOptions): Promise<void> {
         "-t",
         String(durationSec),
         "-c:v libx264",
-        "-preset fast",
+        "-preset ultrafast",
         "-crf 23",
         "-c:a aac",
         "-b:a 128k",
