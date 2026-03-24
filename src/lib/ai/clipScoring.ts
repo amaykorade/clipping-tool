@@ -38,7 +38,7 @@ export async function scoreAndTitleSegments(
   const res = await withCircuitBreaker(
     { name: "openai" },
     () => client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.4,
     }),
@@ -193,7 +193,7 @@ Return ONLY the JSON array.`;
 
   try {
     const res = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
     });
@@ -282,7 +282,7 @@ Return ONLY the JSON array.`;
 
   try {
     const res = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
     });
