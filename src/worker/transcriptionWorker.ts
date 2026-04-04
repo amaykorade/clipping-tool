@@ -254,6 +254,67 @@ async function handleVideoJob(job: Job<VideoJobData>) {
     return { videoId, externalId };
   }
 
+  if (type === JobType.ANALYZE) {
+    if (!videoId) throw new Error("videoId required for ANALYZE job");
+
+    const dbJob = await prisma.job.update({
+      where: { id: job.id as string },
+      data: { status: JobStatus.RUNNING, startedAt: new Date() },
+    });
+
+    // Download video to temp file for audio energy analysis
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { storageKey: true },
+    });
+    const tmpPath = `/tmp/${videoId}-analyze.mp4`;
+    let videoFilePath: string | undefined;
+    try {
+      if (video?.storageKey) {
+        const storage = getStorage();
+        await storage.downloadToFile(video.storageKey, tmpPath);
+        videoFilePath = tmpPath;
+      }
+    } catch { /* proceed without audio energy */ }
+
+    await job.updateProgress(10);
+
+    try {
+      const clips = await generateClipsFromTranscript(videoId, {
+        maxClips: 10,
+        videoFilePath,
+      });
+      console.log(`[Worker] Generated ${clips.length} clips for video ${videoId} (re-generation)`);
+
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { status: VideoStatus.READY },
+      });
+
+      await prisma.job.update({
+        where: { id: dbJob.id },
+        data: { status: JobStatus.COMPLETED, progress: 100, completedAt: new Date() },
+      });
+      await job.updateProgress(100);
+    } catch (err) {
+      console.error(`[Worker] Clip generation failed for video ${videoId}:`, err);
+      // Restore to READY so user can retry (don't set ERROR — clips are optional)
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { status: VideoStatus.READY },
+      });
+      await prisma.job.update({
+        where: { id: dbJob.id },
+        data: { status: JobStatus.FAILED, error: (err as Error).message },
+      });
+    } finally {
+      const fs = await import("fs/promises");
+      fs.unlink(tmpPath).catch(() => {});
+    }
+
+    return { videoId };
+  }
+
   if (type === JobType.GENERATE_CLIP) {
     if (!clipId) throw new Error("clipId required for GENERATE_CLIP job");
 

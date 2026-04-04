@@ -201,8 +201,9 @@ export default function VideoDetailPage({
       const isJson = contentType.includes("application/json");
       const data = isJson ? await res.json() : { error: (await res.text()) || "Server error" };
       if (!res.ok) throw new Error(data.error || "Failed");
-      setClips(Array.isArray(data.clips) ? data.clips : []);
-      showToast("success", "Clips regenerated. New clips appear below.");
+      // Job is queued in the background — update local state to reflect ANALYZING
+      if (video) setVideo({ ...video, status: "ANALYZING" });
+      showToast("success", "Clip generation started. This may take a minute.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
