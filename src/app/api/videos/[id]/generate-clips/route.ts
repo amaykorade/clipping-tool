@@ -26,14 +26,31 @@ export async function POST(
       if (!rl.ok) return rateLimitResponse(rl.retryAfterMs);
     }
 
+    // Check if clip generation is already in progress
+    const currentVideo = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { status: true, storageKey: true },
+    });
+    if (currentVideo?.status === "ANALYZING") {
+      return NextResponse.json(
+        { error: "Clip generation is already in progress" },
+        { status: 409 },
+      );
+    }
+
+    // Set status to ANALYZING so UI shows processing state (survives page refresh)
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: "ANALYZING" },
+    });
+
     // Download video to temp file for audio energy analysis
-    const video2 = await prisma.video.findUnique({ where: { id: videoId }, select: { storageKey: true } });
     let videoFilePath: string | undefined;
     const tmpPath = `/tmp/${videoId}-clips.mp4`;
     try {
-      if (video2?.storageKey) {
+      if (currentVideo?.storageKey) {
         const storage = getStorage();
-        await storage.downloadToFile(video2.storageKey, tmpPath);
+        await storage.downloadToFile(currentVideo.storageKey, tmpPath);
         videoFilePath = tmpPath;
       }
     } catch { /* proceed without audio energy */ }
@@ -41,12 +58,26 @@ export async function POST(
     let clips;
     try {
       clips = await generateClipsFromTranscript(videoId, { maxClips: 10, videoFilePath });
+    } catch (genErr) {
+      // Restore status to READY so user can retry
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { status: "READY" },
+      });
+      throw genErr;
     } finally {
       if (videoFilePath) {
         const fs = await import("fs/promises");
         fs.unlink(tmpPath).catch(() => {});
       }
     }
+
+    // Restore status to READY now that clips are generated
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: "READY" },
+    });
+
     return NextResponse.json({
       clips: clips.map((c) => ({
         id: c.id,

@@ -87,7 +87,7 @@ export async function generateClipsFromTranscript(
   });
 
   if (!video) throw new Error("Video not found");
-  if (video.status !== "READY")
+  if (video.status !== "READY" && video.status !== "ANALYZING")
     throw new Error("Video must be transcribed first (status READY)");
 
   // Collect feedback from existing clips before deleting

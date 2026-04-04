@@ -153,7 +153,7 @@ export default function VideoDetailPage({
   const shouldPoll =
     video &&
     video.status !== "ERROR" &&
-    (video.status === "DOWNLOADING" || video.status === "UPLOADED" || video.status === "TRANSCRIBING" || (video.status === "READY" && hasRenderingClips));
+    (video.status === "DOWNLOADING" || video.status === "UPLOADED" || video.status === "TRANSCRIBING" || video.status === "ANALYZING" || (video.status === "READY" && hasRenderingClips));
 
   useEffect(() => {
     if (!shouldPoll) return;
@@ -337,10 +337,10 @@ export default function VideoDetailPage({
           <div className="flex shrink-0 flex-wrap gap-2">
             <button
               onClick={handleGenerateClips}
-              disabled={loading || video?.status !== "READY"}
+              disabled={loading || (video?.status !== "READY")}
               className="rounded-lg bg-purple-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Generating..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
+              {loading || video?.status === "ANALYZING" ? "Generating clips..." : clips.length > 0 ? "Regenerate clips" : "Generate clips"}
             </button>
             <button
               type="button"
