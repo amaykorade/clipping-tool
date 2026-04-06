@@ -16,7 +16,7 @@ interface ScoreOptions {
   };
 }
 
-const DEFAULT_MIN_HOOK_PAYOFF = 6;
+const DEFAULT_MIN_HOOK_PAYOFF = 5;
 
 /**
  * Ask the model to:
@@ -225,7 +225,7 @@ Return ONLY the JSON array.`;
       const payoff = typeof p.payoffScore === "number" ? p.payoffScore : 0;
       const pace = typeof p.paceScore === "number" ? p.paceScore : 5;
       const one = p.oneClearIdea === true;
-      if (hook >= minScore && payoff >= minScore && pace >= 5 && one) passed.add(key);
+      if (hook >= minScore && payoff >= minScore && pace >= 4 && one) passed.add(key);
     }
 
     const filtered = shortlist.filter(
