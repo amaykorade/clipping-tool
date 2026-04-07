@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     try {
       info = await getYouTubeVideoInfo(url);
     } catch (err) {
+      console.error("[Import URL] YouTube fetch failed:", (err as Error).message);
       if (err instanceof YouTubeError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
       }

@@ -114,10 +114,13 @@ export async function getYouTubeVideoInfo(url: string): Promise<YouTubeVideoInfo
     throw new YouTubeError("Invalid YouTube URL", "NOT_FOUND");
   }
 
+  const cookiesArgs = getCookiesArgs();
+  console.log(`[YouTube] Fetching info for ${url} (cookies: ${cookiesArgs.length > 0 ? "yes" : "no"})`);
+
   try {
     const { stdout } = await execFileAsync(
       "yt-dlp",
-      [...getCookiesArgs(), "--dump-json", "--no-download", "--no-playlist", url],
+      [...cookiesArgs, "--dump-json", "--no-download", "--no-playlist", url],
       { timeout: 30_000, maxBuffer: 10 * 1024 * 1024 },
     );
 
