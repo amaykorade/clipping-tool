@@ -136,8 +136,8 @@ export async function validateVideo(
       return { valid: false, error: "Video is too long (maximum 1 hour)" };
     }
 
-    if (metadata.width < 480 || metadata.height < 480) {
-      return { valid: false, error: "Video resolution too low (minimum 480p)" };
+    if (metadata.width < 240 && metadata.height < 240) {
+      return { valid: false, error: "Video resolution too low (minimum 240p)" };
     }
 
     if (!metadata.hasAudio) {
