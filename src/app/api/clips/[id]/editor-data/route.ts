@@ -56,8 +56,8 @@ export async function GET(
     const storage = getStorage();
     const storageUrl = video.storageKey ? storage.getUrl(video.storageKey) : null;
 
-    // Extract words for the clip's time range with +-10s padding
-    const PADDING_SECONDS = 10;
+    // Extract words for the clip's time range with +-20s padding
+    const PADDING_SECONDS = 20;
     const paddingStart = Math.max(0, clip.startTime - PADDING_SECONDS);
     const paddingEnd = Math.min(
       video.duration ?? clip.endTime + PADDING_SECONDS,
