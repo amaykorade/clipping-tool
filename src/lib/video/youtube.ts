@@ -9,8 +9,21 @@ const execFileAsync = promisify(execFile);
 /** Path to YouTube cookies file — avoids bot detection on cloud server IPs. */
 const COOKIES_PATH = path.join(process.cwd(), "cookies.txt");
 
+let _cookiesWarned = false;
+
 function getCookiesArgs(): string[] {
   if (fs.existsSync(COOKIES_PATH)) {
+    // Warn if cookies file is older than 60 days
+    if (!_cookiesWarned) {
+      try {
+        const stat = fs.statSync(COOKIES_PATH);
+        const ageDays = (Date.now() - stat.mtimeMs) / (1000 * 60 * 60 * 24);
+        if (ageDays > 60) {
+          console.warn(`[YouTube] cookies.txt is ${Math.round(ageDays)} days old — refresh it if YouTube imports start failing`);
+          _cookiesWarned = true;
+        }
+      } catch { /* ignore */ }
+    }
     return ["--cookies", COOKIES_PATH];
   }
   return [];
