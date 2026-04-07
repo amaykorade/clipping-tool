@@ -1,7 +1,20 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 
+import path from "path";
+import fs from "fs";
+
 const execFileAsync = promisify(execFile);
+
+/** Path to YouTube cookies file — avoids bot detection on cloud server IPs. */
+const COOKIES_PATH = path.join(process.cwd(), "cookies.txt");
+
+function getCookiesArgs(): string[] {
+  if (fs.existsSync(COOKIES_PATH)) {
+    return ["--cookies", COOKIES_PATH];
+  }
+  return [];
+}
 
 const YOUTUBE_URL_REGEX =
   /^https?:\/\/(www\.)?(youtube\.com\/(watch\?.*v=|shorts\/|live\/)|youtu\.be\/)[a-zA-Z0-9_-]+/;
@@ -91,7 +104,7 @@ export async function getYouTubeVideoInfo(url: string): Promise<YouTubeVideoInfo
   try {
     const { stdout } = await execFileAsync(
       "yt-dlp",
-      ["--dump-json", "--no-download", "--no-playlist", url],
+      [...getCookiesArgs(), "--dump-json", "--no-download", "--no-playlist", url],
       { timeout: 30_000, maxBuffer: 10 * 1024 * 1024 },
     );
 
@@ -133,6 +146,7 @@ export async function downloadYouTubeVideo(
 
   return new Promise((resolve, reject) => {
     const args = [
+      ...getCookiesArgs(),
       "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/best[height<=1080]",
       "--merge-output-format", "mp4",
       "--no-playlist",
