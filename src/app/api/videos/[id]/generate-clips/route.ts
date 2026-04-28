@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession, canAccessVideo } from "@/lib/auth";
 import { getSafeApiErrorMessage } from "@/lib/errorMessages";
 import { videoQueue } from "@/lib/queue";
-import { JobType, JobStatus } from "@/generated/prisma";
+import { JobType, JobStatus, VideoStatus } from "@/generated/prisma";
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rateLimit";
 
 export async function POST(
@@ -11,7 +11,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ) {
   let videoId: string | null = null;
-  let previousStatus: string | null = null;
+  let previousStatus: VideoStatus | null = null;
   let dbJobId: string | null = null;
   try {
     const params = await context.params;
