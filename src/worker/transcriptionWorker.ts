@@ -21,10 +21,12 @@ const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
 const connection = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  // Never "give up" reconnecting; workers should recover from transient Redis hiccups.
   retryStrategy(times) {
-    if (times > 50) return null; // give up after ~125s of retries
-    return Math.min(times * 500, 5000);
+    return Math.min(Math.max(times, 1) * 500, 5000);
   },
+  connectTimeout: 10_000,
+  keepAlive: 1000,
   enableOfflineQueue: true,
   ...(redisUrl.startsWith("rediss://") && {
     tls: { rejectUnauthorized: true },
@@ -33,6 +35,12 @@ const connection = new IORedis(redisUrl, {
 
 connection.on("error", (err) => {
   console.error("[Worker] Redis connection error:", err.message);
+});
+connection.on("reconnecting", () => {
+  console.warn("[Worker] Redis reconnecting...");
+});
+connection.on("ready", () => {
+  console.log("[Worker] Redis connection ready");
 });
 
 async function handleVideoJob(job: Job<VideoJobData>) {

@@ -30,10 +30,13 @@ function getConnection(): IORedis {
     _connection = new IORedis(redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      // Never "give up" reconnecting in production; a transient hiccup otherwise
+      // leaves the app with a dead Redis socket (EPIPE/ECONNRESET on writes).
       retryStrategy(times) {
-        if (times > 50) return null; // give up after ~125s of retries
-        return Math.min(times * 500, 5000);
+        return Math.min(Math.max(times, 1) * 500, 5000);
       },
+      connectTimeout: 10_000,
+      keepAlive: 1000,
       enableOfflineQueue: true,
       ...(redisUrl.startsWith("rediss://") && {
         tls: { rejectUnauthorized: true },
@@ -41,6 +44,12 @@ function getConnection(): IORedis {
     });
     _connection.on("error", (err) => {
       console.error("[Queue] Redis connection error:", err.message);
+    });
+    _connection.on("reconnecting", () => {
+      console.warn("[Queue] Redis reconnecting...");
+    });
+    _connection.on("ready", () => {
+      console.log("[Queue] Redis connection ready");
     });
   }
   return _connection;
