@@ -10,8 +10,12 @@ export async function POST(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  let videoId: string | null = null;
+  let previousStatus: string | null = null;
+  let dbJobId: string | null = null;
   try {
-    const { id: videoId } = await context.params;
+    const params = await context.params;
+    videoId = params.id;
     const session = await getSession();
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -20,6 +24,7 @@ export async function POST(
     if (!video || !canAccessVideo(video, session)) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
+    previousStatus = video.status;
 
     if (session?.user?.id) {
       const rl = checkRateLimit(`generateClips:${session.user.id}`, RATE_LIMITS.generateClips);
@@ -50,6 +55,7 @@ export async function POST(
         maxRetries: 3,
       },
     });
+    dbJobId = dbJob.id;
 
     await videoQueue.add(
       "analyze",
@@ -60,6 +66,28 @@ export async function POST(
     return NextResponse.json({ queued: true });
   } catch (err) {
     console.error("[generate-clips]", err);
+    // If enqueue fails (Redis/queue outage), revert video status so user can retry.
+    // Also mark the DB job as failed so we don't leave "QUEUED" jobs forever.
+    if (videoId && previousStatus) {
+      try {
+        await prisma.video.update({
+          where: { id: videoId },
+          data: { status: previousStatus },
+        });
+      } catch (e) {
+        console.error("[generate-clips] Failed to revert video status:", e);
+      }
+    }
+    if (dbJobId) {
+      try {
+        await prisma.job.update({
+          where: { id: dbJobId },
+          data: { status: JobStatus.FAILED },
+        });
+      } catch (e) {
+        console.error("[generate-clips] Failed to mark job failed:", e);
+      }
+    }
     const rawMsg = (err as Error).message || "";
     const status =
       rawMsg.includes("not found") ? 404
