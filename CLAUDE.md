@@ -12,6 +12,7 @@ npm run lint         # ESLint (v9 flat config)
 npm run worker            # BullMQ worker — both queues (dev default)
 npm run worker:transcribe # Only transcription queue (API-bound)
 npm run worker:render     # Only render queue (CPU-bound)
+npm run generate-carousels # Generate carousel images from src/data/carousels.ts
 npx prisma generate       # Regenerate Prisma client after schema changes
 npx prisma migrate dev    # Create + apply migration after schema changes
 ```
@@ -82,16 +83,22 @@ System dependencies: `ffmpeg` (with libfreetype for captions when `ENABLE_FFMPEG
 
 ## Key Directories
 
-- `src/app/api/` — API routes (videos, clips, subscription, webhooks, branding, analytics, presets)
+- `src/app/api/video/` — Upload API routes (upload, upload-url, upload-complete, import-url)
+- `src/app/api/videos/` — Video management API (CRUD, waveform, transcript, generate-clips, render-all, download, search)
+- `src/app/api/clips/` — Clip API routes (render, download, subscription, webhooks, branding, analytics, presets)
+- `src/app/how-to/`, `src/app/use/`, `src/app/clips-for/`, `src/app/compare/` — Programmatic SEO pages driven by `src/data/`
+- `src/data/` — Marketing/SEO content data (carousels, competitors, howTo, platforms, useCases)
 - `src/lib/ai/` — AI integrations (transcription, scoring, segmentation, refinement, audio energy)
 - `src/lib/video/` — Upload handling, metadata extraction, clip rendering, waveform generation, YouTube download
 - `src/lib/storage/` — Storage abstraction (Local/S3)
 - `src/lib/queue/` — BullMQ setup with lazy Redis connection
 - `src/lib/email/` — Notification emails (video ready, clips rendered, quota warning)
+- `src/lib/razorpay.ts` — Razorpay subscription/payment helpers
 - `src/worker/` — Background job worker (transcription, clip generation)
 - `src/components/editor/` — Clip editor UI (VideoPreview, Timeline, TrimHandle, CaptionEditor, style/color/aspect/crop pickers)
 - `src/components/compare/` — Competitor comparison page components
 - `prisma/schema.prisma` — Database schema (User, Account, Session, Video, Clip, Job, WebhookEvent)
+- `docs/` — Architecture docs: `CLIP_GENERATION_PIPELINE.md` (AI pipeline detail), `ROADMAP.md` (feature roadmap), `competitive-analysis.md`
 
 ## Key Patterns
 
@@ -101,7 +108,8 @@ System dependencies: `ffmpeg` (with libfreetype for captions when `ENABLE_FFMPEG
 - **Error mapping**: `toUserFriendlyError()` and `getSafeApiErrorMessage()` in `src/lib/errorMessages.ts` — never expose internal errors (Redis, API keys) to users
 - **Prisma singleton**: `src/lib/db/index.ts` — uses driver adapter pattern for serverless compatibility
 - **Lazy Redis**: Queue connection only initialized on first job enqueue (supports static builds)
-- **Video status flow**: DOWNLOADING → UPLOADED → TRANSCRIBING → ANALYZING → READY (or ERROR). DOWNLOADING is for YouTube URL imports only; direct uploads start at UPLOADED
+- **Video status flow**: DOWNLOADING → UPLOADED → TRANSCRIBING → ANALYZING → READY (or ERROR). DOWNLOADING is for YouTube URL imports only; direct uploads start at UPLOADED. ANALYZING is also used for manual clip re-generation (enqueued as ANALYZE job on transcription queue)
+- **Job types**: DOWNLOAD (yt-dlp), TRANSCRIBE (AssemblyAI), ANALYZE (clip generation via GPT-4o-mini), GENERATE_CLIP (FFmpeg render), BATCH_EXPORT. ANALYZE and TRANSCRIBE go to transcription queue; GENERATE_CLIP and BATCH_EXPORT go to render queue
 - **Clip status flow**: PENDING → PROCESSING → COMPLETED (or ERROR)
 - **Zod validation**: Used for runtime schema validation on API inputs
 - **Rate limiting**: In-memory sliding window per user (`src/lib/rateLimit.ts`) on upload, render, download, subscription endpoints
@@ -112,8 +120,7 @@ System dependencies: `ffmpeg` (with libfreetype for captions when `ENABLE_FFMPEG
 - **Aspect ratios**: VERTICAL (9:16), SQUARE (1:1), LANDSCAPE (16:9) — stored as `AspectRatio` enum on Clip
 - **Crop modes**: FILL (center-crop) and FIT (blur background + fit) — stored as `CropMode` enum on Clip
 - **Dark mode**: Class-based toggle with localStorage persistence (Tailwind v4 `@custom-variant dark`)
-- **Icons**: Custom inline SVGs throughout (no icon library). Use `h-N w-N`, `fill="none"`, `stroke="currentColor"`, `strokeWidth={1.5}` to match
-- **No external icon libraries**: All icons are hand-written SVG elements
+- **Icons**: Custom inline SVGs throughout (no icon library). Use `h-N w-N`, `fill="none"`, `stroke="currentColor"`, `strokeWidth={1.5}` to match existing icons
 
 ## Environment Variables
 

@@ -48,7 +48,7 @@ export const PLAN_LIMITS: Record<
   },
   PRO: {
     maxVideos: 25,
-    maxDurationSec: 3 * 60 * 60,
+    maxDurationSec: 4 * 60 * 60,
     maxUploadSizeMB: 3000,
     maxClipDownloadsPerMonth: null,
     watermark: false,

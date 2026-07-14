@@ -132,8 +132,8 @@ export async function validateVideo(
       return { valid: false, error: "Video is too short (minimum 1 second)" };
     }
 
-    if (metadata.duration > 3600) {
-      return { valid: false, error: "Video is too long (maximum 1 hour)" };
+    if (metadata.duration > 4 * 3600) {
+      return { valid: false, error: "Video is too long (maximum 4 hours)" };
     }
 
     if (metadata.width < 240 && metadata.height < 240) {

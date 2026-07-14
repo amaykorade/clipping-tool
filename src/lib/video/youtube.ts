@@ -95,7 +95,20 @@ export class YouTubeError extends Error {
 
 function classifyYtDlpError(stderr: string): YouTubeError {
   const s = stderr.toLowerCase();
-  if (s.includes("private video") || s.includes("sign in"))
+
+  // "Sign in to confirm you're not a bot" is a YouTube anti-abuse gate, not privacy.
+  if (
+    s.includes("sign in to confirm you're not a bot")
+    || s.includes("confirm you're not a bot")
+    || s.includes("please sign in")
+  ) {
+    return new YouTubeError(
+      "YouTube temporarily blocked access to this video from our server. Please try another public video or try again later.",
+      "UNKNOWN",
+    );
+  }
+
+  if (s.includes("private video") || s.includes("this is a private video"))
     return new YouTubeError("This video is private. Only public YouTube videos can be imported.", "PRIVATE");
   if (s.includes("video unavailable") || s.includes("not available"))
     return new YouTubeError("This YouTube video is unavailable or has been removed.", "UNAVAILABLE");

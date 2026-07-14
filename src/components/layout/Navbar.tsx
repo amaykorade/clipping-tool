@@ -9,10 +9,10 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/upload", label: "Upload" },
-  { href: "/videos", label: "My videos" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/upload", label: "Add video" },
+  { href: "/videos", label: "Videos" },
+  { href: "/analytics", label: "Stats" },
+  { href: "/pricing", label: "Plans" },
 ];
 
 export default function Navbar() {
@@ -133,7 +133,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     role="menuitem"
                   >
-                    Account
+                    Settings
                   </Link>
                   <Link
                     href="/videos"
@@ -141,7 +141,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     role="menuitem"
                   >
-                    My videos
+                    Videos
                   </Link>
                   <button
                     type="button"
@@ -249,7 +249,7 @@ export default function Navbar() {
                       onClick={() => { setMobileOpen(false); setMobileAccountOpen(false); }}
                       className="block px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      Account settings
+                      Settings
                     </Link>
                     <button
                       type="button"
